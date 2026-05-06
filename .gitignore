@@ -1,0 +1,10 @@
+node_modules/
+build/
+.vscode/
+*.zip
+*.log
+.DS_Store
+temp_build/
+debug_check/
+debug_extract/
+package-lock.json

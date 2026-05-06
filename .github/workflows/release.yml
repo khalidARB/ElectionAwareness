@@ -1,0 +1,59 @@
+name: Build and Release Theme
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Create Theme Zip
+        run: |
+          THEME_NAME="election-awareness"
+          ZIP_NAME="${THEME_NAME}.zip"
+          mkdir -p temp_build/${THEME_NAME}
+          
+          # Copy only necessary files (excluding source, nodes, etc.)
+          rsync -av --progress . temp_build/${THEME_NAME} \
+            --exclude 'node_modules' \
+            --exclude 'src' \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.vscode' \
+            --exclude 'temp_build' \
+            --exclude 'package.json' \
+            --exclude 'package-lock.json' \
+            --exclude 'webpack.config.js' \
+            --exclude '*.ps1' \
+            --exclude '*.py' \
+            --exclude '*.zip' \
+            --exclude '.gitignore' \
+            --exclude 'debug_check'
+            
+          cd temp_build
+          zip -r ../${ZIP_NAME} ${THEME_NAME}
+          cd ..
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: election-awareness.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

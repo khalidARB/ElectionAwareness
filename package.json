@@ -1,0 +1,27 @@
+{
+  "name": "election-awareness",
+  "version": "1.2.2",
+  "description": "A React-powered WordPress theme.",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "packages-update": "wp-scripts packages-update"
+  },
+  "keywords": [
+    "wordpress",
+    "react",
+    "theme"
+  ],
+  "author": "Agentic Assistant",
+  "license": "GPL-2.0-or-later",
+  "dependencies": {
+    "@wordpress/scripts": "^26.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "framer-motion": "^10.12.16"
+  },
+  "browserslist": [
+    "defaults",
+    "not IE 11"
+  ]
+}

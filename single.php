@@ -61,11 +61,11 @@ get_header(); ?>
                     <span class="share-label">Share</span>
                     <div class="social-share-icons">
                         <a href="https://twitter.com/intent/tweet?url=<?php the_permalink(); ?>&text=<?php the_title(); ?>"
-                            target="_blank" class="share-icon" aria-label="Share on Twitter">Tw</a>
+                            target="_blank" class="share-icon" aria-label="Share on X">X</a>
                         <a href="https://www.facebook.com/sharer/sharer.php?u=<?php the_permalink(); ?>" target="_blank"
                             class="share-icon" aria-label="Share on Facebook">Fb</a>
-                        <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php the_permalink(); ?>"
-                            target="_blank" class="share-icon" aria-label="Share on LinkedIn">Li</a>
+                        <a href="https://api.whatsapp.com/send?text=<?php echo urlencode(get_the_title() . ' ' . get_permalink()); ?>"
+                            target="_blank" class="share-icon" aria-label="Share on WhatsApp">Wa</a>
                     </div>
                 </div>
             </aside>

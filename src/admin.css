@@ -896,9 +896,14 @@ body.toplevel_page_election-theme-dashboard {
     color: #ff0000;
 }
 
-.social-link-card__icon--linkedin {
-    background: rgba(0, 119, 181, 0.1);
-    color: #0077b5;
+.social-link-card__icon--x {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.social-link-card__icon--tiktok {
+    background: rgba(254, 44, 85, 0.1);
+    color: #fe2c55;
 }
 
 .social-link-card__platform-name {

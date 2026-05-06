@@ -118,7 +118,7 @@ const MobileMenu = () => {
                             display: 'flex',
                             gap: '20px'
                         }}>
-                            {['Facebook', 'Instagram', 'Twitter', 'YouTube'].map((social) => (
+                            {['Facebook', 'Instagram', 'X', 'YouTube', 'TikTok'].map((social) => (
                                 <a
                                     key={social}
                                     href="#"
@@ -129,8 +129,9 @@ const MobileMenu = () => {
                                 >
                                     {social === 'Facebook' && <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>}
                                     {social === 'Instagram' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>}
-                                    {social === 'Twitter' && <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>}
+                                    {social === 'X' && <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>}
                                     {social === 'YouTube' && <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" /></svg>}
+                                    {social === 'TikTok' && <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.86-.6-4.12-1.31a11.31 11.31 0 0 1-1.87-1.35v7.45c.03 1.83-.5 3.61-1.48 5.1a9.42 9.42 0 0 1-4.01 3.73c-1.74.83-3.69 1.11-5.61.8-1.92-.31-3.74-1.28-5.07-2.73-1.34-1.44-2.13-3.32-2.22-5.28-.09-1.96.46-3.92 1.58-5.5a9.38 9.38 0 0 1 4.18-3.41c1.51-.55 3.12-.66 4.67-.34v4.13c-1.12-.35-2.35-.29-3.42.17a5.35 5.35 0 0 0-2.6 2.45 5.3 5.3 0 0 0-.25 4.31c.36 1 .98 1.89 1.8 2.53.82.63 1.83.98 2.86 1 1.03.01 2.06-.27 2.94-.82.88-.55 1.57-1.35 1.98-2.3.41-.95.53-2.01.35-3.03V0h.01Z"/></svg>}
                                 </a>
                             ))}
                         </div>

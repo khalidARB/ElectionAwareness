@@ -4,7 +4,7 @@ Theme URI: https://example.com/election-awareness
 Author: ARb
 Author URI: https://example.com/arb
 Description: A high-contrast "Dark Mode" React-powered theme with modern typography and fluid interactivity.
-Version: 1.2.3
+Version: 1.2.4
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -20,15 +20,22 @@ Text Domain: election-awareness
 
 :root {
     /* Color Palette - These will be overridden by inline styles from functions.php */
-    --color-deep-void: #080B10;      /* Main Background */
-    --color-midnight-blue: #0A1019;  /* Secondary Background */
-    --color-steel-blue: #161F2E;     /* Tertiary Background */
-    --color-electric-yellow: #FFFF00; /* Primary Accent */
+    --color-deep-void: #080B10;
+    /* Main Background */
+    --color-midnight-blue: #0A1019;
+    /* Secondary Background */
+    --color-steel-blue: #161F2E;
+    /* Tertiary Background */
+    --color-electric-yellow: #FFFF00;
+    /* Primary Accent */
 
     /* Text Colors */
-    --color-text-white: #FFFFFF;     /* Headings */
-    --color-text-grey: #E2E8F0;      /* Body Text */
-    --color-text-muted: #94A3B8;     /* Muted Text */
+    --color-text-white: #FFFFFF;
+    /* Headings */
+    --color-text-grey: #E2E8F0;
+    /* Body Text */
+    --color-text-muted: #94A3B8;
+    /* Muted Text */
 
     /* Typography */
     --font-heading: 'Space Grotesk', 'Outfit', sans-serif;
@@ -559,11 +566,10 @@ body {
     position: absolute;
     inset: 0;
     /* Dual-layer overlay: subtle dark tint + strong bottom-to-top gradient */
-    background: linear-gradient(to top, 
-        rgba(8, 11, 16, 1) 0%, 
-        rgba(8, 11, 16, 0.8) 20%, 
-        rgba(8, 11, 16, 0.3) 100%
-    );
+    background: linear-gradient(to top,
+            rgba(8, 11, 16, 1) 0%,
+            rgba(8, 11, 16, 0.8) 20%,
+            rgba(8, 11, 16, 0.3) 100%);
     z-index: 2;
     pointer-events: none;
 }
@@ -4432,4 +4438,4 @@ body.single .site-header {
     .product-card-price {
         text-align: center;
     }
-}
+}

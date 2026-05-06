@@ -7,7 +7,10 @@ on:
 
 jobs:
   build:
+    name: Build and Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,7 +22,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build production assets
         run: npm run build
@@ -31,7 +34,7 @@ jobs:
           mkdir -p temp_build/${THEME_NAME}
           
           # Copy only necessary files (excluding source, nodes, etc.)
-          rsync -av --progress . temp_build/${THEME_NAME} \
+          rsync -av . temp_build/${THEME_NAME} \
             --exclude 'node_modules' \
             --exclude 'src' \
             --exclude '.git' \
@@ -51,9 +54,12 @@ jobs:
           zip -r ../${ZIP_NAME} ${THEME_NAME}
           cd ..
 
-      - name: Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: election-awareness.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

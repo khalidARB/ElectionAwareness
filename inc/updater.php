@@ -76,7 +76,7 @@ class Election_Awareness_Updater {
      * Phase 2: GitHub API Communication
      */
     private function get_github_release() {
-        $transient_key = 'gh_update_' . $this->slug;
+        $transient_key = 'gh_update_v2_' . $this->slug;
         $remote = get_transient( $transient_key );
 
         if ( false !== $remote ) {
@@ -86,7 +86,7 @@ class Election_Awareness_Updater {
         $url = "https://api.github.com/repos/{$this->repo}/releases/latest";
         
         $args = array(
-            'timeout' => 10,
+            'timeout' => 15,
             'headers' => array(
                 'Accept' => 'application/vnd.github.v3+json',
                 'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' )
@@ -104,8 +104,8 @@ class Election_Awareness_Updater {
 
         $remote = json_decode( wp_remote_retrieve_body( $response ) );
         
-        // Cache for 12 hours
-        set_transient( $transient_key, $remote, 12 * HOUR_IN_SECONDS );
+        // Cache for 1 hour
+        set_transient( $transient_key, $remote, HOUR_IN_SECONDS );
 
         return $remote;
     }

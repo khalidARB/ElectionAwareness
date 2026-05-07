@@ -227,4 +227,45 @@ document.addEventListener('DOMContentLoaded', () => {
             progressBar.style.width = scrolled + "%";
         });
     }
+
+    // 9. Blog Filters Scroll Logic
+    const filtersWrapper = document.querySelector('.blog-filters-wrapper');
+    const filtersLeft = document.getElementById('blog-filters-left');
+    const filtersRight = document.getElementById('blog-filters-right');
+
+    if (filtersWrapper && filtersLeft && filtersRight) {
+        const scrollAmount = 300;
+
+        filtersLeft.addEventListener('click', () => {
+            filtersWrapper.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+
+        filtersRight.addEventListener('click', () => {
+            filtersWrapper.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+
+        const updateArrowVisibility = () => {
+            const { scrollLeft, scrollWidth, clientWidth } = filtersWrapper;
+
+            // Show/hide left arrow
+            if (scrollLeft <= 5) {
+                filtersLeft.classList.add('hidden');
+            } else {
+                filtersLeft.classList.remove('hidden');
+            }
+
+            // Show/hide right arrow
+            if (scrollLeft + clientWidth >= scrollWidth - 5) {
+                filtersRight.classList.add('hidden');
+            } else {
+                filtersRight.classList.remove('hidden');
+            }
+        };
+
+        filtersWrapper.addEventListener('scroll', updateArrowVisibility);
+        window.addEventListener('resize', updateArrowVisibility);
+
+        // Initial check after a small delay to ensure rendering is complete
+        setTimeout(updateArrowVisibility, 100);
+    }
 });

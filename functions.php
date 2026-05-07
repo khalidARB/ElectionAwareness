@@ -242,10 +242,30 @@ function election_awareness_cpt_init()
     ));
 
     // Flush rewrite rules to ensure new CPT slugs work immediately
-    // Ideally, this should be done only on theme activation, but for debugging we force it once.
-    flush_rewrite_rules(true);
 }
 add_action('init', 'election_awareness_cpt_init');
+
+/**
+ * Flush rewrite rules on theme activation
+ */
+function election_theme_activation() {
+    election_awareness_cpt_init();
+    flush_rewrite_rules();
+}
+add_action('after_switch_theme', 'election_theme_activation');
+
+/**
+ * Add Security Headers
+ */
+function election_add_security_headers() {
+    if (!is_admin()) {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('X-XSS-Protection: 1; mode=block');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+    }
+}
+add_action('send_headers', 'election_add_security_headers');
 
 /**
  * Force Archive Template for Party CPT
@@ -1092,7 +1112,7 @@ function election_register_settings()
         'type' => 'string',
         'default' => '[]',
         'show_in_rest' => true,
-        'sanitize_callback' => 'sanitize_text_field',
+        'sanitize_callback' => 'election_sanitize_json_settings',
     ));
 
     // All News (Blog) Page Settings
@@ -1204,6 +1224,13 @@ function election_register_settings()
         'default' => 'We are the <span class="highlight">voice</span> of clear elections.',
         'show_in_rest' => true,
         'sanitize_callback' => 'wp_kses_post', // Allow HTML for span tags
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_about_sections', array(
+        'type' => 'string',
+        'default' => '[]',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'election_sanitize_json_settings',
     ));
 
     // Terms & Conditions Settings
@@ -1443,6 +1470,31 @@ function election_get_products_rest_api($request) {
     wp_reset_postdata();
 
     return rest_ensure_response($products);
+}
+
+/**
+ * Sanitize JSON settings while allowing HTML in specific fields
+ */
+function election_sanitize_json_settings($input) {
+    $data = json_decode($input, true);
+    if (!is_array($data)) {
+        return '[]';
+    }
+
+    $sanitized_data = array_map(function($item) {
+        if (is_array($item)) {
+            foreach ($item as $key => $value) {
+                if ($key === 'content' || $key === 'title' || $key === 'label') {
+                    $item[$key] = wp_kses_post($value);
+                } else {
+                    $item[$key] = sanitize_text_field($value);
+                }
+            }
+        }
+        return $item;
+    }, $data);
+
+    return json_encode($sanitized_data);
 }
 
 /**

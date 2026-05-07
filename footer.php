@@ -18,7 +18,7 @@ if (!is_page('contact') && !is_page_template('template-contact.php')) {
                             $custom_logo_id = get_theme_mod('custom_logo');
                             $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
                             echo '<a href="' . esc_url(home_url('/')) . '" class="custom-logo-link" rel="home">';
-                            echo '<img src="' . esc_url($logo[0]) . '" srcset="' . esc_url($logo[0]) . ' 1x, ' . esc_url($retina_logo) . ' 2x" class="custom-logo" alt="' . get_bloginfo('name') . '">';
+                            echo '<img src="' . esc_url($logo[0]) . '" srcset="' . esc_url($logo[0]) . ' 1x, ' . esc_url($retina_logo) . ' 2x" class="custom-logo" alt="' . esc_attr(get_bloginfo('name')) . '">';
                             echo '</a>';
                         } else {
                             the_custom_logo();

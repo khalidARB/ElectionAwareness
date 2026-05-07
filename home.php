@@ -21,34 +21,42 @@ get_header();
             ?>
         </h1>
 
-        <!-- Filters: Horizontal Scrollable Pill List -->
-        <div class="blog-filters-wrapper">
-            <div class="blog-filters">
-                <a href="<?php echo esc_url(get_post_type_archive_link('post')); ?>" class="filter-pill active">All</a>
-                <?php
-                $target_categories = array('Elections', 'Policy', 'Opinion');
-                foreach ($target_categories as $cat_name) {
-                    $category = get_term_by('name', $cat_name, 'category');
-                    if ($category) {
+        <!-- Filters: Horizontal Scrollable Pill List with Arrows -->
+        <div class="blog-filters-container">
+            <button class="scroll-arrow scroll-arrow-left" id="blog-filters-left" aria-label="Scroll Left">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="blog-filters-wrapper">
+                <div class="blog-filters">
+                    <a href="<?php echo esc_url(get_post_type_archive_link('post')); ?>" class="filter-pill active">All</a>
+                    <?php
+                    $target_categories = array('Elections', 'Policy', 'Opinion');
+                    foreach ($target_categories as $cat_name) {
+                        $category = get_term_by('name', $cat_name, 'category');
+                        if ($category) {
+                            echo '<a href="' . esc_url(get_category_link($category->term_id)) . '" class="filter-pill">' . esc_html($category->name) . '</a>';
+                        }
+                    }
+
+                    // Also list other categories if needed, or stick to the core ones
+                    $other_categories = get_categories(array(
+                        'exclude' => array_map(function ($name) {
+                            $cat = get_term_by('name', $name, 'category');
+                            return $cat ? $cat->term_id : 0;
+                        }, $target_categories),
+                        'parent' => 0,
+                        'hide_empty' => true
+                    ));
+
+                    foreach ($other_categories as $category) {
                         echo '<a href="' . esc_url(get_category_link($category->term_id)) . '" class="filter-pill">' . esc_html($category->name) . '</a>';
                     }
-                }
-
-                // Also list other categories if needed, or stick to the core ones
-                $other_categories = get_categories(array(
-                    'exclude' => array_map(function ($name) {
-                        $cat = get_term_by('name', $name, 'category');
-                        return $cat ? $cat->term_id : 0;
-                    }, $target_categories),
-                    'parent' => 0,
-                    'hide_empty' => true
-                ));
-
-                foreach ($other_categories as $category) {
-                    echo '<a href="' . esc_url(get_category_link($category->term_id)) . '" class="filter-pill">' . esc_html($category->name) . '</a>';
-                }
-                ?>
+                    ?>
+                </div>
             </div>
+            <button class="scroll-arrow scroll-arrow-right" id="blog-filters-right" aria-label="Scroll Right">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
         </div>
     </section>
 

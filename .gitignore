@@ -7,4 +7,4 @@ build/
 temp_build/
 debug_check/
 debug_extract/
-package-lock.json
+

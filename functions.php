@@ -1402,19 +1402,21 @@ function election_create_newsletter_table() {
     $table_name = $wpdb->prefix . 'election_subscribers';
     $charset_collate = $wpdb->get_charset_collate();
 
+    // Standard SQL for maximum compatibility
     $sql = "CREATE TABLE $table_name (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         email varchar(100) NOT NULL,
-        created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        created_at datetime NOT NULL,
         status varchar(20) DEFAULT 'active' NOT NULL,
         PRIMARY KEY  (id),
-        UNIQUE KEY email (email)
+        KEY email (email)
     ) $charset_collate;";
 
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
 }
 add_action('after_switch_theme', 'election_create_newsletter_table');
+add_action('admin_init', 'election_create_newsletter_table'); // Ensure it exists for admin
 
 // 2. Register REST API Endpoint for Subscription
 add_action('rest_api_init', function () {
@@ -1444,7 +1446,7 @@ function election_newsletter_subscribe_handler($request) {
 
     $table_name = $wpdb->prefix . 'election_subscribers';
     
-    // Check if table exists (just in case)
+    // Double check table existence
     if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
         election_create_newsletter_table();
     }
@@ -1455,20 +1457,31 @@ function election_newsletter_subscribe_handler($request) {
         return array('success' => true, 'message' => 'You are already subscribed!');
     }
 
-    $inserted = $wpdb->insert($table_name, array('email' => $email));
+    // Explicitly insert created_at to avoid issues with MySQL versions/modes
+    $inserted = $wpdb->insert($table_name, array(
+        'email' => $email,
+        'created_at' => current_time('mysql'),
+        'status' => 'active'
+    ));
 
     if ($inserted) {
         return array('success' => true, 'message' => 'Successfully subscribed!');
     }
 
-    return new WP_Error('db_error', 'Could not save subscription.', array('status' => 500));
+    return new WP_Error('db_error', 'Could not save subscription to database. Error: ' . $wpdb->last_error, array('status' => 500));
 }
 
 function election_get_subscribers_handler() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'election_subscribers';
+    
+    // Check if table exists
+    if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+        return array(); // Table doesn't exist yet, return empty list
+    }
+
     $results = $wpdb->get_results("SELECT email, created_at FROM $table_name ORDER BY created_at DESC");
-    return $results;
+    return $results ? $results : array();
 }
 
 // 3. Send Email on New Post/Product

@@ -182,13 +182,17 @@ const AdminDashboard = () => {
 
     const fetchSubscribers = () => {
         setIsFetchingSubs(true);
+        console.log('Fetching subscribers from: /election-awareness/v1/subscribers');
         apiFetch({ path: '/election-awareness/v1/subscribers' })
             .then((data) => {
-                setSubscribers(data);
+                console.log('Subscribers fetched successfully:', data);
+                setSubscribers(Array.isArray(data) ? data : []);
                 setIsFetchingSubs(false);
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error('Error fetching subscribers:', error);
                 setIsFetchingSubs(false);
+                // Optionally set a notice for the subscriber list
             });
     };
 

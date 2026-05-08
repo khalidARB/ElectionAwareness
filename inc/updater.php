@@ -135,18 +135,19 @@ class Election_Awareness_Updater {
         $install_directory = $result['destination'];
         $proper_directory = trailingslashit( $result['remote_destination'] ) . $this->slug;
 
-        // If the extracted folder name is different from the slug
+        // GitHub zips often have a subfolder. If we find our theme files inside a subfolder, move them up.
+        $inner_folder = trailingslashit( $install_directory ) . $this->slug;
+        if ( $wp_filesystem->is_dir( $inner_folder ) ) {
+            $install_directory = $inner_folder;
+        }
+
+        // If the extracted folder name is different from the slug, rename it
         if ( $install_directory !== $proper_directory ) {
-            // Check if destination exists and delete it if it does
             if ( $wp_filesystem->exists( $proper_directory ) ) {
                 $wp_filesystem->delete( $proper_directory, true );
             }
             
-            $move_result = $wp_filesystem->move( $install_directory, $proper_directory );
-            if ( ! $move_result ) {
-                return new WP_Error( 'move_failed', 'Could not move theme to proper directory.' );
-            }
-            
+            $wp_filesystem->move( $install_directory, $proper_directory );
             $result['destination'] = $proper_directory;
         }
 

@@ -38,8 +38,8 @@ Text Domain: election-awareness
     /* Muted Text */
 
     /* Typography */
-    --font-heading: 'Space Grotesk', 'Outfit', sans-serif;
-    --font-body: 'Inter', 'Public Sans', sans-serif;
+    --font-heading: 'Space Grotesk', 'Outfit', 'Hind Siliguri', sans-serif;
+    --font-body: 'Inter', 'Public Sans', 'Hind Siliguri', sans-serif;
 
     /* UI Characteristics */
     --border-radius-lg: 12px;
@@ -369,47 +369,167 @@ body.admin-bar .site-header {
     transform: translateX(5px);
 }
 
-/* Newsletter Form */
-.newsletter-form {
+/* Newsletter Full Section */
+.newsletter-full-section {
+    background-color: var(--color-midnight-blue);
+    padding: 100px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.newsletter-full-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(250, 204, 21, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.newsletter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+}
+
+.newsletter-info h2 {
+    font-size: 48px;
+    margin-bottom: 24px;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.newsletter-info p {
+    font-size: 20px;
+    color: #94A3B8;
+    line-height: 1.6;
+    max-width: 500px;
+}
+
+.form-group-glow {
     display: flex;
     background-color: var(--color-steel-blue);
-    border-radius: var(--border-radius-lg);
-    padding: 6px;
-    margin-top: 20px;
-    border: 1px solid transparent;
-    transition: border-color 0.3s;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
 }
 
-.newsletter-form:focus-within {
+.form-group-glow:focus-within {
     border-color: var(--color-electric-yellow);
+    box-shadow: 0 10px 40px rgba(250, 204, 21, 0.1);
+    transform: translateY(-2px);
 }
 
-.newsletter-form input {
+.form-group-glow input {
     background: transparent;
     border: none;
+    flex: 1;
+    padding: 0 25px;
     color: white;
-    padding: 10px 16px;
-    flex-grow: 1;
+    font-size: 18px;
     font-family: var(--font-body);
     outline: none;
 }
 
-.newsletter-form .btn-icon {
-    background-color: var(--color-electric-yellow);
-    color: black;
-    border: none;
-    border-radius: 8px;
-    width: 40px;
-    height: 40px;
+.form-group-glow .btn {
+    padding: 18px 35px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+}
+
+.form-response {
+    margin-top: 15px;
+    padding-left: 20px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+@media (max-width: 992px) {
+    .newsletter-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+    }
+    
+    .newsletter-info p {
+        margin: 0 auto;
+    }
+    
+    .newsletter-info h2 {
+        font-size: 36px;
+    }
+}
+
+@media (max-width: 576px) {
+    .form-group-glow {
+        flex-direction: column;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        gap: 15px;
+    }
+    
+    .form-group-glow input {
+        background-color: var(--color-steel-blue);
+        height: 60px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .form-group-glow .btn {
+        width: 100%;
+        justify-content: center;
+        height: 60px;
+    }
+}
+
+/* Footer Social Icons */
+.footer-social-icons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.footer-social-icons a {
+    width: 44px;
+    height: 44px;
+    background-color: var(--color-steel-blue);
+    color: var(--color-text-white);
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: transform 0.2s;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.newsletter-form .btn-icon:hover {
-    transform: translateX(2px);
+.footer-social-icons a:hover {
+    background-color: var(--color-electric-yellow);
+    color: black;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(250, 204, 21, 0.2);
+    border-color: var(--color-electric-yellow);
+}
+
+.footer-social-icons a svg {
+    transition: transform 0.3s ease;
+}
+
+.footer-social-icons a:hover svg {
+    transform: scale(1.1);
 }
 
 /* Footer Bottom */

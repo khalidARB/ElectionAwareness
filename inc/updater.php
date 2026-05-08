@@ -122,16 +122,35 @@ class Election_Awareness_Updater {
             return $response;
         }
 
+        // Initialize the WordPress filesystem if not already done
+        if ( ! $wp_filesystem ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+
+        if ( ! $wp_filesystem ) {
+            return new WP_Error( 'fs_error', 'Could not initialize filesystem.' );
+        }
+
         $install_directory = $result['destination'];
         $proper_directory = trailingslashit( $result['remote_destination'] ) . $this->slug;
 
         // If the extracted folder name is different from the slug
         if ( $install_directory !== $proper_directory ) {
-            $wp_filesystem->move( $install_directory, $proper_directory );
+            // Check if destination exists and delete it if it does
+            if ( $wp_filesystem->exists( $proper_directory ) ) {
+                $wp_filesystem->delete( $proper_directory, true );
+            }
+            
+            $move_result = $wp_filesystem->move( $install_directory, $proper_directory );
+            if ( ! $move_result ) {
+                return new WP_Error( 'move_failed', 'Could not move theme to proper directory.' );
+            }
+            
             $result['destination'] = $proper_directory;
         }
 
-        return $result;
+        return $response; // Return original response (usually true) instead of $result array
     }
 }
 

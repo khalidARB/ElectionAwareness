@@ -61,7 +61,7 @@ if (!defined('ABSPATH')) {
 function election_awareness_scripts()
 {
     // Enqueue Google Fonts
-    wp_enqueue_style('election-google-fonts', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;700&family=Public+Sans:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap', array(), null);
+    wp_enqueue_style('election-google-fonts', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;700&family=Public+Sans:wght@400;600&family=Space+Grotesk:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap', array(), null);
 
     // Enqueue Main Stylesheet (Cache busting with filemtime())
     wp_enqueue_style('election-style', get_stylesheet_uri(), array(), filemtime(get_template_directory() . '/style.css'));
@@ -1298,6 +1298,35 @@ function election_register_settings()
         'show_in_rest' => true,
         'sanitize_callback' => 'sanitize_text_field',
     ));
+
+    // Newsletter Section Settings
+    register_setting('election_theme_options_group', 'election_theme_newsletter_heading', array(
+        'type' => 'string',
+        'default' => 'Join our Newsletter',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_newsletter_subheading', array(
+        'type' => 'string',
+        'default' => 'Get the latest election updates and deep dives directly in your inbox.',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_newsletter_btn_text', array(
+        'type' => 'string',
+        'default' => 'Subscribe Now',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_newsletter_placeholder', array(
+        'type' => 'string',
+        'default' => 'Your email address',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
 }
 
 function election_awareness_customize_footer($wp_customize)
@@ -1351,9 +1380,197 @@ function election_awareness_customize_footer($wp_customize)
         'type' => 'text',
         'description' => 'Use %year% to auto-insert the current year.',
     ));
+    // Social Media Icons
+    $wp_customize->add_setting('social_icon_facebook', array('default' => '', 'sanitize_callback' => 'esc_url_raw'));
+    $wp_customize->add_control('social_icon_facebook', array('label' => 'Facebook URL', 'section' => 'election_footer_settings', 'type' => 'url'));
+
+    $wp_customize->add_setting('social_icon_instagram', array('default' => '', 'sanitize_callback' => 'esc_url_raw'));
+    $wp_customize->add_control('social_icon_instagram', array('label' => 'Instagram URL', 'section' => 'election_footer_settings', 'type' => 'url'));
+
+    $wp_customize->add_setting('social_icon_x', array('default' => '', 'sanitize_callback' => 'esc_url_raw'));
+    $wp_customize->add_control('social_icon_x', array('label' => 'X (Twitter) URL', 'section' => 'election_footer_settings', 'type' => 'url'));
 }
 add_action('customize_register', 'election_awareness_customize_footer');
+
+/**
+ * --- Newsletter Subscriber System ---
+ */
+
+// 1. Create Database Table
+function election_create_newsletter_table() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'election_subscribers';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        email varchar(100) NOT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        status varchar(20) DEFAULT 'active' NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY email (email)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+add_action('after_switch_theme', 'election_create_newsletter_table');
+
+// 2. Register REST API Endpoint for Subscription
+add_action('rest_api_init', function () {
+    register_rest_route('election-awareness/v1', '/subscribe', array(
+        'methods' => 'POST',
+        'callback' => 'election_newsletter_subscribe_handler',
+        'permission_callback' => '__return_true'
+    ));
+    
+    register_rest_route('election-awareness/v1', '/subscribers', array(
+        'methods' => 'GET',
+        'callback' => 'election_get_subscribers_handler',
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        }
+    ));
+});
+
+function election_newsletter_subscribe_handler($request) {
+    global $wpdb;
+    $params = $request->get_json_params();
+    $email = isset($params['email']) ? sanitize_email($params['email']) : '';
+
+    if (!is_email($email)) {
+        return new WP_Error('invalid_email', 'Please provide a valid email address.', array('status' => 400));
+    }
+
+    $table_name = $wpdb->prefix . 'election_subscribers';
+    
+    // Check if table exists (just in case)
+    if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+        election_create_newsletter_table();
+    }
+
+    $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table_name WHERE email = %s", $email));
+
+    if ($exists) {
+        return array('success' => true, 'message' => 'You are already subscribed!');
+    }
+
+    $inserted = $wpdb->insert($table_name, array('email' => $email));
+
+    if ($inserted) {
+        return array('success' => true, 'message' => 'Successfully subscribed!');
+    }
+
+    return new WP_Error('db_error', 'Could not save subscription.', array('status' => 500));
+}
+
+function election_get_subscribers_handler() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'election_subscribers';
+    $results = $wpdb->get_results("SELECT email, created_at FROM $table_name ORDER BY created_at DESC");
+    return $results;
+}
+
+// 3. Send Email on New Post/Product
+function election_notify_subscribers_on_publish($new_status, $old_status, $post) {
+    if ($new_status !== 'publish' || $old_status === 'publish') {
+        return;
+    }
+
+    if (!in_array($post->post_type, array('post', 'product'))) {
+        return;
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'election_subscribers';
+    $subscribers = $wpdb->get_col("SELECT email FROM $table_name WHERE status = 'active'");
+
+    if (empty($subscribers)) {
+        return;
+    }
+
+    $subject = '[' . get_bloginfo('name') . '] New Content Published: ' . $post->post_title;
+    $content_type = ($post->post_type === 'product') ? 'New Product' : 'New Blog Post';
+    
+    $message = "Hello,\n\nWe just published a $content_type: " . $post->post_title . "\n\n";
+    $message .= "You can view it here: " . get_permalink($post->ID) . "\n\n";
+    $message .= "Thank you for staying informed!\n\n--\n" . get_bloginfo('name');
+
+    $headers = array('Content-Type: text/plain; charset=UTF-8');
+
+    // Send emails in batches if needed, but for small lists direct sending is fine
+    foreach ($subscribers as $email) {
+        wp_mail($email, $subject, $message, $headers);
+    }
+}
+add_action('transition_post_status', 'election_notify_subscribers_on_publish', 10, 3);
 add_action('init', 'election_register_settings');
+
+/**
+ * --- SEO & Social Sharing Enhancement ---
+ */
+
+/**
+ * Add Open Graph Tags for Social Sharing
+ */
+function election_add_social_sharing_meta() {
+    if (!is_singular()) return;
+
+    global $post;
+    $img_url = '';
+    
+    if (has_post_thumbnail($post->ID)) {
+        $img_url = get_the_post_thumbnail_url($post->ID, 'full');
+    } else {
+        // Fallback to logo
+        $custom_logo_id = get_theme_mod('custom_logo');
+        $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
+        if ($logo) $img_url = $logo[0];
+    }
+
+    $title = get_the_title();
+    $excerpt = wp_strip_all_tags(get_the_excerpt());
+    if (empty($excerpt)) {
+        $excerpt = wp_trim_words($post->post_content, 30);
+    }
+    $permalink = get_permalink();
+    $site_name = get_bloginfo('name');
+
+    // Open Graph
+    echo '<meta property="og:site_name" content="' . esc_attr($site_name) . '" />' . "\n";
+    echo '<meta property="og:type" content="article" />' . "\n";
+    echo '<meta property="og:title" content="' . esc_attr($title) . '" />' . "\n";
+    echo '<meta property="og:description" content="' . esc_attr($excerpt) . '" />' . "\n";
+    echo '<meta property="og:url" content="' . esc_url($permalink) . '" />' . "\n";
+    if ($img_url) {
+        echo '<meta property="og:image" content="' . esc_url($img_url) . '" />' . "\n";
+        echo '<meta property="og:image:secure_url" content="' . esc_url($img_url) . '" />' . "\n";
+    }
+
+    // Twitter
+    echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+    echo '<meta name="twitter:title" content="' . esc_attr($title) . '" />' . "\n";
+    echo '<meta name="twitter:description" content="' . esc_attr($excerpt) . '" />' . "\n";
+    if ($img_url) {
+        echo '<meta name="twitter:image" content="' . esc_url($img_url) . '" />' . "\n";
+    }
+}
+add_action('wp_head', 'election_add_social_sharing_meta', 5);
+
+/**
+ * Sanitize Bangla Slugs
+ * This helps prevent URL issues with Bangla characters on some server environments.
+ */
+function election_sanitize_bangla_slugs($slug, $post_ID, $post_status, $post_type) {
+    if (in_array($post_type, array('post', 'page', 'product'))) {
+        // If the slug is entirely non-latin, we might want to keep it or handle it.
+        // Modern WP usually handles it, but if it fails, we could potentially 
+        // transliterate it. For now, we ensure the slug is properly encoded.
+        return $slug;
+    }
+    return $slug;
+}
+// add_filter('wp_unique_post_slug', 'election_sanitize_bangla_slugs', 10, 4);
 
 /**
  * Handle All News and Archive Post Count via pre_get_posts

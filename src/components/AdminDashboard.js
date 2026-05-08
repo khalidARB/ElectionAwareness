@@ -59,6 +59,16 @@ const AdminDashboard = () => {
     const [privacySections, setPrivacySections] = useState([]);
     const [privacyUpdatedDate, setPrivacyUpdatedDate] = useState('');
 
+    // Newsletter Settings State
+    const [newsHeading, setNewsHeading] = useState('Join our Newsletter');
+    const [newsSubheading, setNewsSubheading] = useState('Get the latest election updates and deep dives directly in your inbox.');
+    const [newsBtnText, setNewsBtnText] = useState('Subscribe Now');
+    const [newsPlaceholder, setNewsPlaceholder] = useState('Your email address');
+
+    // Subscribers State
+    const [subscribers, setSubscribers] = useState([]);
+    const [isFetchingSubs, setIsFetchingSubs] = useState(false);
+
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [notice, setNotice] = useState(null);
@@ -152,6 +162,15 @@ const AdminDashboard = () => {
                     }
                 }
 
+                // Newsletter Fetch
+                if (settings.election_theme_newsletter_heading) setNewsHeading(settings.election_theme_newsletter_heading);
+                if (settings.election_theme_newsletter_subheading) setNewsSubheading(settings.election_theme_newsletter_subheading);
+                if (settings.election_theme_newsletter_btn_text) setNewsBtnText(settings.election_theme_newsletter_btn_text);
+                if (settings.election_theme_newsletter_placeholder) setNewsPlaceholder(settings.election_theme_newsletter_placeholder);
+
+                // Fetch Subscribers
+                fetchSubscribers();
+
                 setIsLoading(false);
             })
             .catch((error) => {
@@ -160,6 +179,18 @@ const AdminDashboard = () => {
                 setIsLoading(false);
             });
     }, []);
+
+    const fetchSubscribers = () => {
+        setIsFetchingSubs(true);
+        apiFetch({ path: '/election-awareness/v1/subscribers' })
+            .then((data) => {
+                setSubscribers(data);
+                setIsFetchingSubs(false);
+            })
+            .catch(() => {
+                setIsFetchingSubs(false);
+            });
+    };
 
     const handleSave = () => {
         setIsSaving(true);
@@ -202,7 +233,11 @@ const AdminDashboard = () => {
                 election_theme_privacy_title: privacyTitle,
                 election_theme_privacy_subtitle: privacySubtitle,
                 election_theme_privacy_sections: JSON.stringify(privacySections),
-                election_theme_privacy_updated_date: privacyUpdatedDate
+                election_theme_privacy_updated_date: privacyUpdatedDate,
+                election_theme_newsletter_heading: newsHeading,
+                election_theme_newsletter_subheading: newsSubheading,
+                election_theme_newsletter_btn_text: newsBtnText,
+                election_theme_newsletter_placeholder: newsPlaceholder
             },
         })
             .then(() => {
@@ -328,6 +363,7 @@ const AdminDashboard = () => {
             { id: 'about', label: 'About Page', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg> },
             { id: 'terms', label: 'Terms & Conditions', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> },
             { id: 'privacy', label: 'Privacy Policy', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg> },
+            { id: 'newsletter', label: 'Newsletter', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H17.5C20 5 22 7 22 9.5V17z" /><path d="M2 9l10 7 10-7" /></svg> },
             { id: 'social', label: 'Social Media', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg> },
         ];
 
@@ -389,7 +425,7 @@ const AdminDashboard = () => {
                                                         {link.platform === 'instagram' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg>}
                                                         {(link.platform === 'twitter' || link.platform === 'x') && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z" /><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" /></svg>}
                                                         {link.platform === 'youtube' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" /><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" /></svg>}
-                                                        {link.platform === 'linkedin' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect x="2" y="9" width="4" height="12" /><circle cx="4" cy="4" r="2" /></svg>}
+                                                        {link.platform === 'linkedin' && <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.23 0H1.77C.8 0 0 .77 0 1.72v20.56C0 23.23.8 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.2 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.58c-1.14 0-2.06-.93-2.06-2.06 0-1.14.92-2.06 2.06-2.06 1.14 0 2.06.92 2.06 2.06 0 1.13-.92 2.06-2.06 2.06zM20.45 20.45h-3.56v-5.6c0-1.34-.03-3.06-1.87-3.06-1.87 0-2.15 1.46-2.15 2.96v5.7h-3.56V9h3.42v1.56h.05c.48-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29z"/></svg>}
                                                         {link.platform === 'tiktok' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" /></svg>}
                                                     </div>
                                                     <span className="social-link-card__platform-name">{(link.platform === 'x' || link.platform === 'twitter') ? 'X' : link.platform.charAt(0).toUpperCase() + link.platform.slice(1)}</span>
@@ -439,6 +475,78 @@ const AdminDashboard = () => {
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                         Add Social Link
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'newsletter' && (
+                            <div className="settings-section">
+                                <h2 className="settings-section-title">Newsletter Section Settings</h2>
+                                <PanelRow>
+                                    <div style={{ width: '100%' }}>
+                                        <TextControl
+                                            label="Section Heading"
+                                            value={newsHeading}
+                                            onChange={(value) => setNewsHeading(value)}
+                                        />
+                                    </div>
+                                </PanelRow>
+                                <PanelRow>
+                                    <div style={{ width: '100%', marginTop: '15px' }}>
+                                        <TextControl
+                                            label="Section Subheading"
+                                            value={newsSubheading}
+                                            onChange={(value) => setNewsSubheading(value)}
+                                        />
+                                    </div>
+                                </PanelRow>
+                                <PanelRow>
+                                    <div style={{ width: '100%', marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                        <TextControl
+                                            label="Button Text"
+                                            value={newsBtnText}
+                                            onChange={(value) => setNewsBtnText(value)}
+                                        />
+                                        <TextControl
+                                            label="Input Placeholder"
+                                            value={newsPlaceholder}
+                                            onChange={(value) => setNewsPlaceholder(value)}
+                                        />
+                                    </div>
+                                </PanelRow>
+
+                                <div style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0 }}>Recent Subscribers</h3>
+                                        <Button isSecondary onClick={fetchSubscribers} disabled={isFetchingSubs}>
+                                            {isFetchingSubs ? <Spinner /> : 'Refresh List'}
+                                        </Button>
+                                    </div>
+
+                                    {subscribers.length === 0 ? (
+                                        <div style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                                            No subscribers yet.
+                                        </div>
+                                    ) : (
+                                        <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                <thead>
+                                                    <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>Email Address</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>Joined Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {subscribers.map((sub, idx) => (
+                                                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            <td style={{ padding: '12px 15px', color: '#fff' }}>{sub.email}</td>
+                                                            <td style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.5)' }}>{new Date(sub.created_at).toLocaleDateString()}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

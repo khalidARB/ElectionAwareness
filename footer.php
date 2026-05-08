@@ -2,6 +2,7 @@
 // Global CTA Section (exclude on Contact page to avoid redundancy)
 if (!is_page('contact') && !is_page_template('template-contact.php')) {
     get_template_part('template-parts/cta-section');
+    get_template_part('template-parts/newsletter-section');
 }
 ?>
 
@@ -72,23 +73,62 @@ if (!is_page('contact') && !is_page_template('template-contact.php')) {
                 ?>
             </div>
 
-            <!-- Column 4: Newsletter -->
-            <div class="footer-col newsletter-col">
-                <h4 class="footer-heading">
-                    <?php echo esc_html(get_theme_mod('footer_newsletter_heading', 'Newsletter')); ?></h4>
-                <p><?php echo nl2br(esc_html(get_theme_mod('footer_newsletter_text', 'Get the latest updates directly in your inbox.'))); ?>
-                </p>
-                <form class="newsletter-form">
-                    <input type="email" placeholder="<?php esc_attr_e('Your email address', 'election-awareness'); ?>"
-                        required />
-                    <button type="submit" class="btn-icon" aria-label="Join">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </button>
-                </form>
+            <!-- Column 4: Social Media -->
+            <div class="footer-col social-col">
+                <h4 class="footer-heading"><?php esc_html_e('Follow Us', 'election-awareness'); ?></h4>
+                <p><?php esc_html_e('Connect with us on social media for the latest updates.', 'election-awareness'); ?></p>
+                <div class="footer-social-icons">
+                    <?php
+                    $social_links_raw = get_option('election_theme_social_links', '[]');
+                    $social_links = json_decode($social_links_raw, true);
+
+                    if (!empty($social_links) && is_array($social_links)) {
+                        foreach ($social_links as $link) {
+                            $platform = isset($link['platform']) ? $link['platform'] : '';
+                            $url = isset($link['url']) ? $link['url'] : '#';
+                            $aria_label = ucfirst($platform);
+
+                            if (empty($url))
+                                continue;
+
+                            echo '<a href="' . esc_url($url) . '" aria-label="' . esc_attr($aria_label) . '" target="_blank" rel="noopener noreferrer">';
+
+                            switch ($platform) {
+                                case 'facebook':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>';
+                                    break;
+                                case 'instagram':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>';
+                                    break;
+                                case 'twitter':
+                                case 'x':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>';
+                                    break;
+                                case 'linkedin':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.23 0H1.77C.8 0 0 .77 0 1.72v20.56C0 23.23.8 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.2 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.58c-1.14 0-2.06-.93-2.06-2.06 0-1.14.92-2.06 2.06-2.06 1.14 0 2.06.92 2.06 2.06 0 1.13-.92 2.06-2.06 2.06zM20.45 20.45h-3.56v-5.6c0-1.34-.03-3.06-1.87-3.06-1.87 0-2.15 1.46-2.15 2.96v5.7h-3.56V9h3.42v1.56h.05c.48-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29z"/></svg>';
+                                    break;
+                                case 'youtube':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>';
+                                    break;
+                                case 'tiktok':
+                                    echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.86-.6-4.12-1.31a11.31 11.31 0 0 1-1.87-1.35v7.45c.03 1.83-.5 3.61-1.48 5.1a9.42 9.42 0 0 1-4.01 3.73c-1.74.83-3.69 1.11-5.61.8-1.92-.31-3.74-1.28-5.07-2.73-1.34-1.44-2.13-3.32-2.22-5.28-.09-1.96.46-3.92 1.58-5.5a9.38 9.38 0 0 1 4.18-3.41c1.51-.55 3.12-.66 4.67-.34v4.13c-1.12-.35-2.35-.29-3.42.17a5.35 5.35 0 0 0-2.6 2.45 5.3 5.3 0 0 0-.25 4.31c.36 1 .98 1.89 1.8 2.53.82.63 1.83.98 2.86 1 1.03.01 2.06-.27 2.94-.82.88-.55 1.57-1.35 1.98-2.3.41-.95.53-2.01.35-3.03V0h.01Z"/></svg>';
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            echo '</a>';
+                        }
+                    } else {
+                        // Fallback
+                        ?>
+                        <a href="#" aria-label="Facebook"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+                        <a href="#" aria-label="Instagram"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+                        <a href="#" aria-label="X"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"></path></svg></a>
+                        <?php
+                    }
+                    ?>
+                </div>
             </div>
         </div>
 

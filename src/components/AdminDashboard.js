@@ -65,6 +65,13 @@ const AdminDashboard = () => {
     const [newsBtnText, setNewsBtnText] = useState('Subscribe Now');
     const [newsPlaceholder, setNewsPlaceholder] = useState('Your email address');
 
+    // Products Page Settings State
+    const [productsHeading, setProductsHeading] = useState('Awareness Gear');
+    const [productsSubtitle, setProductsSubtitle] = useState('Support the movement with our official merchandise and premium reports.');
+    const [productsEmptyText, setProductsEmptyText] = useState('No products available yet. Check back soon!');
+    const [productsCtaText, setProductsCtaText] = useState('Call to Buy');
+    const [productsGlobalPhone, setProductsGlobalPhone] = useState('');
+
     // Subscribers State
     const [subscribers, setSubscribers] = useState([]);
     const [isFetchingSubs, setIsFetchingSubs] = useState(false);
@@ -168,6 +175,13 @@ const AdminDashboard = () => {
                 if (settings.election_theme_newsletter_btn_text) setNewsBtnText(settings.election_theme_newsletter_btn_text);
                 if (settings.election_theme_newsletter_placeholder) setNewsPlaceholder(settings.election_theme_newsletter_placeholder);
 
+                // Products Settings Fetch
+                if (settings.election_theme_products_heading) setProductsHeading(settings.election_theme_products_heading);
+                if (settings.election_theme_products_subtitle) setProductsSubtitle(settings.election_theme_products_subtitle);
+                if (settings.election_theme_products_empty_text) setProductsEmptyText(settings.election_theme_products_empty_text);
+                if (settings.election_theme_products_cta_text) setProductsCtaText(settings.election_theme_products_cta_text);
+                if (settings.election_theme_products_global_phone) setProductsGlobalPhone(settings.election_theme_products_global_phone);
+
                 // Fetch Subscribers
                 fetchSubscribers();
 
@@ -193,6 +207,23 @@ const AdminDashboard = () => {
                 console.error('Error fetching subscribers:', error);
                 setIsFetchingSubs(false);
                 // Optionally set a notice for the subscriber list
+            });
+    };
+
+    const handleDeleteSubscriber = (id) => {
+        if (!confirm('Are you sure you want to delete this subscriber?')) return;
+
+        apiFetch({
+            path: `/election-awareness/v1/subscribers/${id}`,
+            method: 'DELETE',
+        })
+            .then(() => {
+                setNotice({ status: 'success', message: 'Subscriber deleted successfully.' });
+                fetchSubscribers(); // Refresh list
+            })
+            .catch((error) => {
+                console.error('Error deleting subscriber:', error);
+                setNotice({ status: 'error', message: 'Failed to delete subscriber.' });
             });
     };
 
@@ -241,7 +272,12 @@ const AdminDashboard = () => {
                 election_theme_newsletter_heading: newsHeading,
                 election_theme_newsletter_subheading: newsSubheading,
                 election_theme_newsletter_btn_text: newsBtnText,
-                election_theme_newsletter_placeholder: newsPlaceholder
+                election_theme_newsletter_placeholder: newsPlaceholder,
+                election_theme_products_heading: productsHeading,
+                election_theme_products_subtitle: productsSubtitle,
+                election_theme_products_empty_text: productsEmptyText,
+                election_theme_products_cta_text: productsCtaText,
+                election_theme_products_global_phone: productsGlobalPhone
             },
         })
             .then(() => {
@@ -368,6 +404,7 @@ const AdminDashboard = () => {
             { id: 'terms', label: 'Terms & Conditions', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> },
             { id: 'privacy', label: 'Privacy Policy', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg> },
             { id: 'newsletter', label: 'Newsletter', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H17.5C20 5 22 7 22 9.5V17z" /><path d="M2 9l10 7 10-7" /></svg> },
+            { id: 'products', label: 'Products Page', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> },
             { id: 'social', label: 'Social Media', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg> },
         ];
 
@@ -483,7 +520,68 @@ const AdminDashboard = () => {
                             </div>
                         )}
 
-                        {activeTab === 'newsletter' && (
+                        {activeTab === 'products' && (
+                            <div className="settings-section">
+                                <h2 className="settings-section-title">Products Page Settings</h2>
+                                
+                                <div className="settings-group" style={{ marginBottom: '40px' }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', color: '#fff' }}>Header & Content</h3>
+                                    <PanelRow>
+                                        <div style={{ width: '100%' }}>
+                                            <TextControl
+                                                label="Page Heading"
+                                                value={productsHeading}
+                                                onChange={(val) => setProductsHeading(val)}
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                    <PanelRow>
+                                        <div style={{ width: '100%', marginTop: '15px' }}>
+                                            <TextControl
+                                                label="Page Subtitle"
+                                                value={productsSubtitle}
+                                                onChange={(val) => setProductsSubtitle(val)}
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                    <PanelRow>
+                                        <div style={{ width: '100%', marginTop: '15px' }}>
+                                            <TextControl
+                                                label="Empty State Message"
+                                                value={productsEmptyText}
+                                                onChange={(val) => setProductsEmptyText(val)}
+                                                help="Text shown when no products are published."
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                </div>
+
+                                <div className="settings-group" style={{ paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', color: '#fff' }}>Button & Fallback</h3>
+                                    <PanelRow>
+                                        <div style={{ width: '100%' }}>
+                                            <TextControl
+                                                label="Button Text"
+                                                value={productsCtaText}
+                                                onChange={(val) => setProductsCtaText(val)}
+                                                help='Default is "Call to Buy"'
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                    <PanelRow>
+                                        <div style={{ width: '100%', marginTop: '15px' }}>
+                                            <TextControl
+                                                label="WhatsApp Number"
+                                                value={productsGlobalPhone}
+                                                onChange={(val) => setProductsGlobalPhone(val)}
+                                                help="Include country code (e.g., 88017...). Fallback if per-product number is missing."
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                </div>
+                            </div>
+                        )}
+                {activeTab === 'newsletter' && (
                             <div className="settings-section">
                                 <h2 className="settings-section-title">Newsletter Section Settings</h2>
                                 <PanelRow>
@@ -522,8 +620,42 @@ const AdminDashboard = () => {
                                 <div style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                         <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0 }}>Recent Subscribers</h3>
-                                        <Button isSecondary onClick={fetchSubscribers} disabled={isFetchingSubs}>
-                                            {isFetchingSubs ? <Spinner /> : 'Refresh List'}
+                                        <Button 
+                                            onClick={fetchSubscribers} 
+                                            disabled={isFetchingSubs}
+                                            style={{
+                                                background: 'rgba(250, 204, 21, 0.1)',
+                                                border: '1px solid #FACC15',
+                                                color: '#FACC15',
+                                                borderRadius: '8px',
+                                                padding: '8px 16px',
+                                                height: 'auto',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '600',
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 0 10px rgba(250, 204, 21, 0.1)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                            onMouseOver={(e) => {
+                                                e.currentTarget.style.background = '#FACC15';
+                                                e.currentTarget.style.color = '#000';
+                                                e.currentTarget.style.boxShadow = '0 0 20px rgba(250, 204, 21, 0.4)';
+                                            }}
+                                            onMouseOut={(e) => {
+                                                e.currentTarget.style.background = 'rgba(250, 204, 21, 0.1)';
+                                                e.currentTarget.style.color = '#FACC15';
+                                                e.currentTarget.style.boxShadow = '0 0 10px rgba(250, 204, 21, 0.1)';
+                                            }}
+                                        >
+                                            {isFetchingSubs ? <Spinner /> : (
+                                                <>
+                                                    <span className="dashicons dashicons-update" style={{ fontSize: '16px', width: '16px', height: '16px' }}></span>
+                                                    Refresh List
+                                                </>
+                                            )}
                                         </Button>
                                     </div>
 
@@ -538,13 +670,23 @@ const AdminDashboard = () => {
                                                     <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                                         <th style={{ padding: '15px', color: '#FACC15' }}>Email Address</th>
                                                         <th style={{ padding: '15px', color: '#FACC15' }}>Joined Date</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15', textAlign: 'right' }}>Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {subscribers.map((sub, idx) => (
-                                                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                        <tr key={sub.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                             <td style={{ padding: '12px 15px', color: '#fff' }}>{sub.email}</td>
                                                             <td style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.5)' }}>{new Date(sub.created_at).toLocaleDateString()}</td>
+                                                            <td style={{ padding: '12px 15px', textAlign: 'right' }}>
+                                                                <Button 
+                                                                    isDestructive 
+                                                                    isSmall 
+                                                                    onClick={() => handleDeleteSubscriber(sub.id)}
+                                                                >
+                                                                    Delete
+                                                                </Button>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

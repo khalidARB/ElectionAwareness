@@ -7,6 +7,9 @@ get_header();
 
 $heading = get_option('election_theme_products_heading', 'Awareness Gear');
 $subtitle = get_option('election_theme_products_subtitle', 'Support the movement with our official merchandise and premium reports.');
+$empty_text = get_option('election_theme_products_empty_text', 'No products available yet. Check back soon!');
+$cta_text = get_option('election_theme_products_cta_text', 'Call to Buy');
+$global_phone = get_option('election_theme_products_global_phone', '');
 
 // Query all products
 $products_query = new WP_Query(array(
@@ -28,6 +31,7 @@ if ($products_query->have_posts()) {
             'image'     => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: '',
             'price'     => floatval(get_post_meta(get_the_ID(), '_product_price', true)),
             'buyUrl'    => get_post_meta(get_the_ID(), '_product_buy_url', true) ?: '#',
+            'contactPhone' => get_post_meta(get_the_ID(), '_product_contact_phone', true) ?: '',
             'shortDesc' => get_post_meta(get_the_ID(), '_product_short_desc', true) ?: get_the_excerpt(),
             'date'      => get_the_date('Y-m-d H:i:s'),
         );
@@ -50,6 +54,9 @@ if ($products_query->have_posts()) {
     <section class="products-section container">
         <div id="product-grid-root" data-props='<?php echo esc_attr(wp_json_encode(array(
             'initialProducts' => $products_data,
+            'emptyText' => $empty_text,
+            'ctaText' => $cta_text,
+            'globalPhone' => $global_phone,
         ))); ?>'></div>
     </section>
 

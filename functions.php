@@ -349,22 +349,36 @@ add_action('add_meta_boxes', 'product_add_meta_boxes');
 function product_details_callback($post)
 {
     $price = get_post_meta($post->ID, '_product_price', true);
-    $buy_url = get_post_meta($post->ID, '_product_buy_url', true);
+    $sku = get_post_meta($post->ID, '_product_sku', true);
+    $availability = get_post_meta($post->ID, '_product_availability', true) ?: 'instock';
     $short_desc = get_post_meta($post->ID, '_product_short_desc', true);
+    $contact_phone = get_post_meta($post->ID, '_product_contact_phone', true);
 
     wp_nonce_field('product_details_nonce', 'product_details_nonce');
     ?>
     <p>
-        <label>Price ($):</label><br>
-        <input type="number" step="0.01" min="0" name="product_price" value="<?php echo esc_attr($price); ?>" style="width:100%;">
+        <label>Price (৳):</label><br>
+        <input type="number" step="1" min="0" name="product_price" value="<?php echo esc_attr($price); ?>" style="width:100%;" placeholder="e.g. 1500">
     </p>
     <p>
-        <label>Buy URL (external link):</label><br>
-        <input type="url" name="product_buy_url" value="<?php echo esc_attr($buy_url); ?>" style="width:100%;" placeholder="https://">
+        <label>SKU:</label><br>
+        <input type="text" name="product_sku" value="<?php echo esc_attr($sku); ?>" style="width:100%;" placeholder="e.g. TSHIRT-001">
+    </p>
+    <p>
+        <label>Availability:</label><br>
+        <select name="product_availability" style="width:100%;">
+            <option value="instock" <?php selected($availability, 'instock'); ?>>In Stock</option>
+            <option value="outofstock" <?php selected($availability, 'outofstock'); ?>>Out of Stock</option>
+            <option value="preorder" <?php selected($availability, 'preorder'); ?>>Pre-order</option>
+        </select>
     </p>
     <p>
         <label>Short Description (shown on card, max 2 lines):</label><br>
         <textarea name="product_short_desc" style="width:100%;" rows="2"><?php echo esc_textarea($short_desc); ?></textarea>
+    </p>
+    <p>
+        <label>WhatsApp Number (include country code):</label><br>
+        <input type="text" name="product_contact_phone" value="<?php echo esc_attr($contact_phone); ?>" style="width:100%;" placeholder="88017...">
     </p>
     <?php
 }
@@ -382,10 +396,14 @@ function product_save_meta($post_id)
 
     if (isset($_POST['product_price']))
         update_post_meta($post_id, '_product_price', sanitize_text_field($_POST['product_price']));
-    if (isset($_POST['product_buy_url']))
-        update_post_meta($post_id, '_product_buy_url', esc_url_raw($_POST['product_buy_url']));
+    if (isset($_POST['product_sku']))
+        update_post_meta($post_id, '_product_sku', sanitize_text_field($_POST['product_sku']));
+    if (isset($_POST['product_availability']))
+        update_post_meta($post_id, '_product_availability', sanitize_text_field($_POST['product_availability']));
     if (isset($_POST['product_short_desc']))
         update_post_meta($post_id, '_product_short_desc', sanitize_textarea_field($_POST['product_short_desc']));
+    if (isset($_POST['product_contact_phone']))
+        update_post_meta($post_id, '_product_contact_phone', sanitize_text_field($_POST['product_contact_phone']));
 }
 add_action('save_post', 'product_save_meta');
 
@@ -1299,6 +1317,27 @@ function election_register_settings()
         'sanitize_callback' => 'sanitize_text_field',
     ));
 
+    register_setting('election_theme_options_group', 'election_theme_products_empty_text', array(
+        'type' => 'string',
+        'default' => 'No products available yet. Check back soon!',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_products_cta_text', array(
+        'type' => 'string',
+        'default' => 'Call to Buy',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_products_global_phone', array(
+        'type' => 'string',
+        'default' => '',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
     // Newsletter Section Settings
     register_setting('election_theme_options_group', 'election_theme_newsletter_heading', array(
         'type' => 'string',
@@ -1433,6 +1472,14 @@ add_action('rest_api_init', function () {
             return current_user_can('manage_options');
         }
     ));
+
+    register_rest_route('election-awareness/v1', '/subscribers/(?P<id>\d+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'election_delete_subscriber_handler',
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        }
+    ));
 });
 
 function election_newsletter_subscribe_handler($request) {
@@ -1480,8 +1527,22 @@ function election_get_subscribers_handler() {
         return array(); // Table doesn't exist yet, return empty list
     }
 
-    $results = $wpdb->get_results("SELECT email, created_at FROM $table_name ORDER BY created_at DESC");
+    $results = $wpdb->get_results("SELECT id, email, created_at FROM $table_name ORDER BY created_at DESC");
     return $results ? $results : array();
+}
+
+function election_delete_subscriber_handler($request) {
+    global $wpdb;
+    $id = $request->get_param('id');
+    $table_name = $wpdb->prefix . 'election_subscribers';
+    
+    $deleted = $wpdb->delete($table_name, array('id' => $id), array('%d'));
+    
+    if ($deleted) {
+        return array('success' => true, 'message' => 'Subscriber deleted.');
+    }
+    
+    return new WP_Error('delete_error', 'Could not delete subscriber.', array('status' => 500));
 }
 
 // 3. Send Email on New Post/Product

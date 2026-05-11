@@ -4,7 +4,7 @@ Theme URI: https://example.com/election-awareness
 Author: ARb
 Author URI: https://example.com/arb
 Description: A high-contrast "Dark Mode" React-powered theme with modern typography and fluid interactivity.
-Version: 1.3.5
+Version: 1.3.6
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -461,11 +461,11 @@ body.admin-bar .site-header {
         gap: 40px;
         text-align: center;
     }
-    
+
     .newsletter-info p {
         margin: 0 auto;
     }
-    
+
     .newsletter-info h2 {
         font-size: 36px;
     }
@@ -480,14 +480,14 @@ body.admin-bar .site-header {
         padding: 0;
         gap: 15px;
     }
-    
+
     .form-group-glow input {
         background-color: var(--color-steel-blue);
         height: 60px;
         border-radius: 15px;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .form-group-glow .btn {
         width: 100%;
         justify-content: center;
@@ -802,7 +802,7 @@ body {
 .ticker-track {
     display: inline-block;
     padding-left: 100%;
-    animation: ticker-move 30s linear infinite;
+    animation: ticker-move 60s linear infinite;
 }
 
 .ticker-wrapper:hover .ticker-track {
@@ -4465,7 +4465,7 @@ body.single .site-header {
     white-space: nowrap;
 }
 
-/* Buy Now Button */
+/* Call to Buy Button */
 .product-buy-btn {
     display: inline-flex;
     align-items: center;
@@ -4488,9 +4488,11 @@ body.single .site-header {
 }
 
 .product-buy-btn:hover {
-    background-color: #e6e600;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(255, 255, 0, 0.3);
+    background-color: #FACC15;
+    color: #000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(250, 204, 21, 0.4);
+    text-decoration: none;
 }
 
 .product-buy-btn:active {
@@ -4596,4 +4598,328 @@ body.single .site-header {
     .product-card-price {
         text-align: center;
     }
+}
+/* ========================================
+   SINGLE PRODUCT PAGE
+   ======================================== */
+.product-single-page {
+    padding: 120px 0 80px;
+    background-color: var(--color-deep-void);
+    color: var(--color-text-grey);
+}
+
+.product-breadcrumbs {
+    margin-bottom: 30px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+}
+
+.product-breadcrumbs a {
+    color: var(--color-text-white);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.product-breadcrumbs a:hover {
+    color: var(--color-electric-yellow);
+}
+
+.product-main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 60px;
+    margin-bottom: 80px;
+}
+
+/* Image Section */
+.product-image-section {
+    position: relative;
+}
+
+.product-gallery-main {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-gallery-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.product-gallery-main:hover img {
+    transform: scale(1.05);
+}
+
+.product-img-placeholder {
+    color: rgba(255, 255, 255, 0.1);
+}
+
+/* Info Section */
+.product-info-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.product-meta-cat {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-electric-yellow);
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.product-title {
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--color-text-white);
+    line-height: 1.1;
+    margin-bottom: 25px;
+}
+
+.product-price-tag {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin-bottom: 30px;
+}
+
+.product-price-tag .currency {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--color-electric-yellow);
+}
+
+.product-price-tag .amount {
+    font-family: var(--font-heading);
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--color-text-white);
+}
+
+.product-description-excerpt {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+    opacity: 0.9;
+}
+
+.product-description-excerpt p {
+    margin-bottom: 20px;
+}
+
+.product-actions {
+    margin-bottom: 50px;
+}
+
+.whatsapp-buy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background-color: #25D366;
+    color: #fff;
+    padding: 18px 40px;
+    border-radius: 12px;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-buy-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(37, 211, 102, 0.4);
+    background-color: #128C7E;
+}
+
+.product-meta-extra {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 30px;
+    display: grid;
+    gap: 12px;
+}
+
+.meta-item {
+    display: flex;
+    gap: 10px;
+    font-size: 15px;
+}
+
+.meta-item .label {
+    opacity: 0.5;
+    font-weight: 500;
+    min-width: 100px;
+}
+
+.meta-item .value {
+    color: var(--color-text-white);
+}
+
+.meta-item .value.in-stock {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+/* Related Products Section */
+.related-products {
+    margin-top: 100px;
+    padding-top: 60px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.related-header {
+    margin-bottom: 40px;
+}
+
+.related-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-white);
+    margin-bottom: 15px;
+}
+
+.related-line {
+    width: 60px;
+    height: 4px;
+    background: var(--color-electric-yellow);
+    border-radius: 2px;
+}
+
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+}
+
+.related-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.related-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--color-electric-yellow);
+    transform: translateY(-5px);
+}
+
+.r-img {
+    aspect-ratio: 1/1;
+    overflow: hidden;
+}
+
+.r-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.related-card:hover .r-img img {
+    transform: scale(1.1);
+}
+
+.r-info {
+    padding: 20px;
+}
+
+.r-info h4 {
+    font-family: var(--font-heading);
+    color: var(--color-text-white);
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.r-price {
+    color: var(--color-electric-yellow);
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* RESPONSIVE PRODUCT PAGE */
+@media (max-width: 1024px) {
+    .product-main-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    
+    .product-title {
+        font-size: 2.8rem;
+    }
+    
+    .related-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .product-single-page {
+        padding: 100px 0 60px;
+    }
+    
+    .product-title {
+        font-size: 2.2rem;
+    }
+    
+    .product-price-tag .amount {
+        font-size: 36px;
+    }
+    
+    .whatsapp-buy-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .related-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.product-card-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.product-card-title a:hover {
+    color: var(--color-electric-yellow);
+}
+
+.product-short-description {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    color: var(--color-text-grey);
+    opacity: 0.9;
+    border-left: 3px solid var(--color-electric-yellow);
+    padding-left: 20px;
+    font-style: italic;
+}
+
+.meta-item .value.out-of-stock {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.meta-item .value.pre-order {
+    color: var(--color-electric-yellow);
+    font-weight: 600;
 }

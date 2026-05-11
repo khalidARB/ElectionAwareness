@@ -20,42 +20,8 @@ const sortProducts = (products, sortKey) => {
     }
 };
 
-const ProductCard = ({ product, index }) => {
-    const [buyState, setBuyState] = useState('idle'); // idle | adding | added
-
-    const handleBuyClick = useCallback((e) => {
-        e.preventDefault();
-        if (buyState !== 'idle') return;
-
-        setBuyState('adding');
-
-        setTimeout(() => {
-            setBuyState('added');
-
-            setTimeout(() => {
-                if (product.buyUrl && product.buyUrl !== '#') {
-                    window.open(product.buyUrl, '_blank', 'noopener,noreferrer');
-                }
-                setBuyState('idle');
-            }, 1200);
-        }, 1500);
-    }, [buyState, product.buyUrl]);
-
-    const getBtnText = () => {
-        switch (buyState) {
-            case 'adding':
-                return (
-                    <>
-                        <span className="product-buy-spinner"></span>
-                        Adding...
-                    </>
-                );
-            case 'added':
-                return 'Added ✓';
-            default:
-                return 'Buy Now';
-        }
-    };
+const ProductCard = ({ product, index, ctaText, globalPhone }) => {
+    const displayPhone = product.contactPhone || globalPhone;
 
     return (
         <motion.article
@@ -66,26 +32,28 @@ const ProductCard = ({ product, index }) => {
             transition={{ duration: 0.5, delay: (index % 4) * 0.1 }}
         >
             <div className="product-card-image">
-                {product.image ? (
-                    <img
-                        src={product.image}
-                        alt={product.title}
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="product-card-placeholder">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <path d="M21 15l-5-5L5 21" />
-                        </svg>
-                    </div>
-                )}
+                <a href={product.link}>
+                    {product.image ? (
+                        <img
+                            src={product.image}
+                            alt={product.title}
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className="product-card-placeholder">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <path d="M21 15l-5-5L5 21" />
+                            </svg>
+                        </div>
+                    )}
+                </a>
             </div>
 
             <div className="product-card-content">
                 <h3 className="product-card-title" title={product.title}>
-                    {product.title}
+                    <a href={product.link}>{product.title}</a>
                 </h3>
                 <p className="product-card-desc">
                     {product.shortDesc}
@@ -93,22 +61,29 @@ const ProductCard = ({ product, index }) => {
 
                 <div className="product-card-footer">
                     <span className="product-card-price">
-                        ${product.price.toFixed(2)}
+                        ৳{Math.round(product.price)}
                     </span>
-                    <button
-                        className={`product-buy-btn ${buyState}`}
-                        onClick={handleBuyClick}
-                        disabled={buyState !== 'idle'}
+                    <a
+                        href={displayPhone ? `https://wa.me/${displayPhone.replace(/[^0-9]/g, '')}` : '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="product-buy-btn"
+                        onClick={(e) => {
+                            if (!displayPhone) {
+                                e.preventDefault();
+                                alert('WhatsApp number not provided.');
+                            }
+                        }}
                     >
-                        {getBtnText()}
-                    </button>
+                        {ctaText || 'Call to Buy'}
+                    </a>
                 </div>
             </div>
         </motion.article>
     );
 };
 
-const ProductGrid = ({ initialProducts = [] }) => {
+const ProductGrid = ({ initialProducts = [], emptyText, ctaText, globalPhone }) => {
     const [activeSort, setActiveSort] = useState('latest');
 
     const sorted = sortProducts(initialProducts, activeSort);
@@ -116,7 +91,7 @@ const ProductGrid = ({ initialProducts = [] }) => {
     if (initialProducts.length === 0) {
         return (
             <div className="products-empty">
-                <p>No products available yet. Check back soon!</p>
+                <p>{emptyText || 'No products available yet. Check back soon!'}</p>
             </div>
         );
     }
@@ -147,6 +122,8 @@ const ProductGrid = ({ initialProducts = [] }) => {
                             key={product.id}
                             product={product}
                             index={index}
+                            ctaText={ctaText}
+                            globalPhone={globalPhone}
                         />
                     ))}
                 </AnimatePresence>

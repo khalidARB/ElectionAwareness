@@ -223,7 +223,8 @@ const AdminDashboard = () => {
             })
             .catch((error) => {
                 console.error('Error deleting subscriber:', error);
-                setNotice({ status: 'error', message: 'Failed to delete subscriber.' });
+                const errorMsg = error.message || 'Failed to delete subscriber.';
+                setNotice({ status: 'error', message: errorMsg });
             });
     };
 

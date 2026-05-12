@@ -1536,13 +1536,29 @@ function election_delete_subscriber_handler($request) {
     $id = $request->get_param('id');
     $table_name = $wpdb->prefix . 'election_subscribers';
     
+    // Check if table exists first to be safe
+    if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+        return new WP_Error('table_missing', 'Subscriber table does not exist.', array('status' => 500));
+    }
+
     $deleted = $wpdb->delete($table_name, array('id' => $id), array('%d'));
     
-    if ($deleted) {
-        return array('success' => true, 'message' => 'Subscriber deleted.');
+    if ($deleted === false) {
+        return new WP_Error('delete_error', 'Database error: ' . $wpdb->last_error, array('status' => 500));
+    }
+
+    if ($deleted === 0) {
+        // Check if it exists at all
+        $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE id = %d", $id));
+        if (!$exists) {
+            return new WP_Error('not_found', 'Subscriber not found. ID: ' . $id, array('status' => 404));
+        }
+        // If it exists but 0 rows were deleted, it's strange, but we'll report success if it's already gone or something? 
+        // No, let's just say it failed to delete.
+        return new WP_Error('delete_failed', 'Failed to delete subscriber. It might have been deleted already.', array('status' => 500));
     }
     
-    return new WP_Error('delete_error', 'Could not delete subscriber.', array('status' => 500));
+    return array('success' => true, 'message' => 'Subscriber deleted successfully.');
 }
 
 // 3. Send Email on New Post/Product
@@ -1721,17 +1737,54 @@ function election_enqueue_admin_scripts($hook)
 }
 add_action('admin_enqueue_scripts', 'election_enqueue_admin_scripts');
 
-/**
- * REST API: Products Endpoint
- */
-function election_register_products_rest_route() {
+function election_register_api_routes() {
     register_rest_route('election/v1', '/products', array(
         'methods'  => 'GET',
         'callback' => 'election_get_products_rest_api',
         'permission_callback' => '__return_true',
     ));
+
+    register_rest_route('election/v1', '/signup', array(
+        'methods'  => 'POST',
+        'callback' => 'election_register_user_rest_api',
+        'permission_callback' => '__return_true',
+    ));
 }
-add_action('rest_api_init', 'election_register_products_rest_route');
+add_action('rest_api_init', 'election_register_api_routes');
+
+function election_register_user_rest_api($request) {
+    $params = $request->get_json_params();
+    $username = sanitize_user($params['username']);
+    $email = sanitize_email($params['email']);
+    $password = $params['password'];
+    $nickname = sanitize_text_field($params['name']);
+
+    if (empty($username) || empty($email) || empty($password)) {
+        return new WP_Error('missing_fields', 'Username, email and password are required.', array('status' => 400));
+    }
+
+    if (username_exists($username) || email_exists($email)) {
+        return new WP_Error('user_exists', 'User already exists.', array('status' => 400));
+    }
+
+    $user_id = wp_create_user($username, $password, $email);
+
+    if (is_wp_error($user_id)) {
+        return $user_id;
+    }
+
+    wp_update_user(array(
+        'ID' => $user_id,
+        'display_name' => $nickname,
+        'nickname' => $nickname
+    ));
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'message' => 'User registered successfully!',
+        'user_id' => $user_id
+    ));
+}
 
 function election_get_products_rest_api($request) {
     $products_query = new WP_Query(array(

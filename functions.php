@@ -28,6 +28,7 @@ function election_add_social_meta_tags() {
     $og_desc     = get_bloginfo('description');
     $og_url      = home_url('/');
     $og_image    = '';
+    $og_image_alt = get_bloginfo('name');
 
     // Handle Custom Logo as fallback image
     $custom_logo_id = get_theme_mod('custom_logo');
@@ -35,6 +36,8 @@ function election_add_social_meta_tags() {
         $logo_data = wp_get_attachment_image_src($custom_logo_id, 'full');
         if ($logo_data) {
             $og_image = $logo_data[0];
+            $alt_text = get_post_meta($custom_logo_id, '_wp_attachment_image_alt', true);
+            if ($alt_text) $og_image_alt = $alt_text;
         }
     }
 
@@ -53,8 +56,23 @@ function election_add_social_meta_tags() {
 
         // Featured Image
         if (has_post_thumbnail($post->ID)) {
-            $og_image = get_the_post_thumbnail_url($post->ID, 'full');
+            $thumbnail_id = get_post_thumbnail_id($post->ID);
+            $thumbnail_data = wp_get_attachment_image_src($thumbnail_id, 'full');
+            if ($thumbnail_data) {
+                $og_image = $thumbnail_data[0];
+                $alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+                if ($alt_text) {
+                    $og_image_alt = $alt_text;
+                } else {
+                    $og_image_alt = $og_title;
+                }
+            }
         }
+    }
+    
+    // Fallback if no description
+    if (empty($og_desc)) {
+        $og_desc = get_bloginfo('description');
     }
 
     // Output tags
@@ -70,6 +88,14 @@ function election_add_social_meta_tags() {
     <meta property="og:image:secure_url" content="<?php echo esc_url($og_image); ?>">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="<?php echo esc_attr($og_image_alt); ?>">
+    <?php
+        // Facebook recommends specifying image type for faster rendering
+        $image_type = wp_check_filetype($og_image);
+        if ($image_type['type']) {
+            echo '<meta property="og:image:type" content="' . esc_attr($image_type['type']) . '">' . "\n";
+        }
+    ?>
     <?php endif; ?>
 
     <!-- Twitter Card Meta Tags -->
@@ -78,10 +104,20 @@ function election_add_social_meta_tags() {
     <meta name="twitter:description" content="<?php echo esc_attr($og_desc); ?>">
     <?php if ($og_image): ?>
     <meta name="twitter:image" content="<?php echo esc_url($og_image); ?>">
+    <meta name="twitter:image:alt" content="<?php echo esc_attr($og_image_alt); ?>">
     <?php endif; ?>
     <?php
 }
 add_action('wp_head', 'election_add_social_meta_tags', 5);
+
+/**
+ * SEO: Explicitly allow Facebook crawler in robots.txt to fix 403 block
+ */
+function election_allow_facebook_crawler($output, $public) {
+    $output .= "\nUser-agent: facebookexternalhit\nAllow: /\n";
+    return $output;
+}
+add_filter('robots_txt', 'election_allow_facebook_crawler', 10, 2);
 
 /**
  * SEO: Image Optimization - Prioritize WebP and SVG Support

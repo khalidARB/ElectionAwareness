@@ -18,17 +18,32 @@
                 <!-- Logo -->
                 <div class="site-branding">
                     <?php
-                    if (has_custom_logo()) {
-                        $retina_logo = get_theme_mod('retina_logo');
-                        if ($retina_logo) {
-                            $custom_logo_id = get_theme_mod('custom_logo');
-                            $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
-                            echo '<a href="' . esc_url(home_url('/')) . '" class="custom-logo-link" rel="home">';
-                            echo '<img src="' . esc_url($logo[0]) . '" srcset="' . esc_url($logo[0]) . ' 1x, ' . esc_url($retina_logo) . ' 2x" class="custom-logo" alt="' . esc_attr(get_bloginfo('name')) . '">';
-                            echo '</a>';
+                    $custom_logo_id = get_theme_mod('custom_logo');
+                    $retina_logo = get_theme_mod('retina_logo');
+                    $mobile_logo = get_theme_mod('mobile_logo');
+
+                    if ($custom_logo_id) {
+                        $logo = wp_get_attachment_image_src($custom_logo_id, 'full');
+                        echo '<a href="' . esc_url(home_url('/')) . '" class="custom-logo-link" rel="home">';
+                        
+                        if ($mobile_logo) {
+                            echo '<picture>';
+                            echo '<source media="(max-width: 768px)" srcset="' . esc_url($mobile_logo) . '">';
+                            if ($retina_logo) {
+                                echo '<img src="' . esc_url($logo[0]) . '" srcset="' . esc_url($logo[0]) . ' 1x, ' . esc_url($retina_logo) . ' 2x" class="custom-logo" alt="' . esc_attr(get_bloginfo('name')) . '">';
+                            } else {
+                                echo '<img src="' . esc_url($logo[0]) . '" class="custom-logo" alt="' . esc_attr(get_bloginfo('name')) . '">';
+                            }
+                            echo '</picture>';
                         } else {
-                            the_custom_logo();
+                            if ($retina_logo) {
+                                echo '<img src="' . esc_url($logo[0]) . '" srcset="' . esc_url($logo[0]) . ' 1x, ' . esc_url($retina_logo) . ' 2x" class="custom-logo" alt="' . esc_attr(get_bloginfo('name')) . '">';
+                            } else {
+                                the_custom_logo();
+                            }
                         }
+                        
+                        echo '</a>';
                     } else {
                         ?>
                         <a href="<?php echo esc_url(home_url('/')); ?>" rel="home" class="logo-link">

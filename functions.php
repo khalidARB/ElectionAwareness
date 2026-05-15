@@ -18,14 +18,70 @@ add_filter('xmlrpc_methods', function ($methods) {
 });
 
 /**
- * Add Meta Description
+ * SEO: Add Open Graph and Twitter Card Meta Tags
  */
-function election_add_meta_description() {
-    if ( is_front_page() || is_home() ) {
-        echo '<meta name="description" content="Empower your vote with Election Awareness. Get modern, unbiased political analysis, breaking election news, and deep dives into party policies.">' . "\n";
+function election_add_social_meta_tags() {
+    // Default values
+    $site_name   = get_bloginfo('name');
+    $og_type     = 'website';
+    $og_title    = get_bloginfo('name');
+    $og_desc     = get_bloginfo('description');
+    $og_url      = home_url('/');
+    $og_image    = '';
+
+    // Handle Custom Logo as fallback image
+    $custom_logo_id = get_theme_mod('custom_logo');
+    if ($custom_logo_id) {
+        $logo_data = wp_get_attachment_image_src($custom_logo_id, 'full');
+        if ($logo_data) {
+            $og_image = $logo_data[0];
+        }
     }
+
+    if (is_single() || is_page()) {
+        global $post;
+        $og_type  = 'article';
+        $og_title = get_the_title();
+        $og_url   = get_permalink();
+        
+        // Description from excerpt or content
+        if (has_excerpt($post->ID)) {
+            $og_desc = wp_strip_all_tags(get_the_excerpt());
+        } else {
+            $og_desc = wp_trim_words(wp_strip_all_tags($post->post_content), 30);
+        }
+
+        // Featured Image
+        if (has_post_thumbnail($post->ID)) {
+            $og_image = get_the_post_thumbnail_url($post->ID, 'full');
+        }
+    }
+
+    // Output tags
+    ?>
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:site_name" content="<?php echo esc_attr($site_name); ?>">
+    <meta property="og:type" content="<?php echo esc_attr($og_type); ?>">
+    <meta property="og:title" content="<?php echo esc_attr($og_title); ?>">
+    <meta property="og:description" content="<?php echo esc_attr($og_desc); ?>">
+    <meta property="og:url" content="<?php echo esc_url($og_url); ?>">
+    <?php if ($og_image): ?>
+    <meta property="og:image" content="<?php echo esc_url($og_image); ?>">
+    <meta property="og:image:secure_url" content="<?php echo esc_url($og_image); ?>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <?php endif; ?>
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo esc_attr($og_title); ?>">
+    <meta name="twitter:description" content="<?php echo esc_attr($og_desc); ?>">
+    <?php if ($og_image): ?>
+    <meta name="twitter:image" content="<?php echo esc_url($og_image); ?>">
+    <?php endif; ?>
+    <?php
 }
-add_action( 'wp_head', 'election_add_meta_description' );
+add_action('wp_head', 'election_add_social_meta_tags', 5);
 
 /**
  * SEO: Image Optimization - Prioritize WebP and SVG Support
@@ -565,6 +621,17 @@ function election_awareness_customize_register($wp_customize)
     ));
     $wp_customize->add_control(new WP_Customize_Image_Control($wp_customize, 'retina_logo', array(
         'label' => __('Retina Logo (@2x)', 'election-awareness'),
+        'section' => 'title_tagline',
+    )));
+
+    // Mobile Logo
+    $wp_customize->add_setting('mobile_logo', array(
+        'default' => '',
+        'sanitize_callback' => 'esc_url_raw',
+    ));
+    $wp_customize->add_control(new WP_Customize_Image_Control($wp_customize, 'mobile_logo', array(
+        'label' => __('Mobile Logo (Optional)', 'election-awareness'),
+        'description' => __('Alternative logo for mobile devices.', 'election-awareness'),
         'section' => 'title_tagline',
     )));
 

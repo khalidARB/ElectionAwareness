@@ -47,8 +47,8 @@ def create_zip():
                 
                 # Calculate arcname (path inside zip)
                 # We want: election-awareness/style.css
-                rel_path = os.path.relpath(file_path, '.')
-                arcname = os.path.join(THEME_NAME, rel_path)
+                rel_path = os.path.relpath(file_path, '.').replace(os.sep, '/')
+                arcname = f"{THEME_NAME}/{rel_path}"
                 
                 print(f"Adding: {arcname}")
                 zipf.write(file_path, arcname)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from '@wordpress/element';
 import ImageUpload from './ImageUpload';
 import CustomRangeSlider from './CustomRangeSlider';
-import { Button, Spinner, Notice, PanelRow, TextControl } from '@wordpress/components';
+import { Button, Spinner, Notice, PanelRow, TextControl, ToggleControl } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 
 
@@ -80,6 +80,15 @@ const AdminDashboard = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [notice, setNotice] = useState(null);
     const [lastSaved, setLastSaved] = useState(null);
+
+    // Push Notifications State
+    const [expoAccessToken, setExpoAccessToken] = useState('');
+    const [enableAutoPush, setEnableAutoPush] = useState(true);
+    const [manualPushTitle, setManualPushTitle] = useState('');
+    const [manualPushBody, setManualPushBody] = useState('');
+    const [isSendingPush, setIsSendingPush] = useState(false);
+    const [pushTokens, setPushTokens] = useState([]);
+    const [isFetchingTokens, setIsFetchingTokens] = useState(false);
 
     // Tab Navigation State
     const [activeTab, setActiveTab] = useState('home');
@@ -182,8 +191,17 @@ const AdminDashboard = () => {
                 if (settings.election_theme_products_cta_text) setProductsCtaText(settings.election_theme_products_cta_text);
                 if (settings.election_theme_products_global_phone) setProductsGlobalPhone(settings.election_theme_products_global_phone);
 
+                // Push Settings Fetch
+                if (settings.election_theme_expo_access_token) setExpoAccessToken(settings.election_theme_expo_access_token);
+                if (settings.hasOwnProperty('election_theme_enable_auto_push')) {
+                    setEnableAutoPush(!!settings.election_theme_enable_auto_push);
+                }
+
                 // Fetch Subscribers
                 fetchSubscribers();
+
+                // Fetch Push Tokens
+                fetchPushTokens();
 
                 setIsLoading(false);
             })
@@ -225,6 +243,75 @@ const AdminDashboard = () => {
                 console.error('Error deleting subscriber:', error);
                 const errorMsg = error.message || 'Failed to delete subscriber.';
                 setNotice({ status: 'error', message: errorMsg });
+            });
+    };
+
+    const fetchPushTokens = () => {
+        setIsFetchingTokens(true);
+        console.log('Fetching push tokens from: /election/v1/push-tokens');
+        apiFetch({ path: '/election/v1/push-tokens' })
+            .then((data) => {
+                console.log('Push tokens fetched successfully:', data);
+                setPushTokens(Array.isArray(data) ? data : []);
+                setIsFetchingTokens(false);
+            })
+            .catch((error) => {
+                console.error('Error fetching push tokens:', error);
+                setIsFetchingTokens(false);
+            });
+    };
+
+    const handleDeletePushToken = (id) => {
+        if (!confirm('Are you sure you want to delete this push token?')) return;
+
+        apiFetch({
+            path: `/election/v1/push-tokens/${id}`,
+            method: 'DELETE',
+        })
+            .then(() => {
+                setNotice({ status: 'success', message: 'Push token deleted successfully.' });
+                fetchPushTokens(); // Refresh list
+            })
+            .catch((error) => {
+                console.error('Error deleting push token:', error);
+                const errorMsg = error.message || 'Failed to delete push token.';
+                setNotice({ status: 'error', message: errorMsg });
+            });
+    };
+
+    const handleSendManualPush = () => {
+        if (!manualPushTitle || !manualPushBody) {
+            alert('Please fill out both Title and Body.');
+            return;
+        }
+
+        setIsSendingPush(true);
+        setNotice(null);
+
+        apiFetch({
+            path: '/election/v1/send-manual-push',
+            method: 'POST',
+            data: {
+                title: manualPushTitle,
+                body: manualPushBody,
+            },
+        })
+            .then((res) => {
+                setIsSendingPush(false);
+                if (res.success) {
+                    setNotice({ status: 'success', message: res.message });
+                    setManualPushTitle('');
+                    setManualPushBody('');
+                } else {
+                    const errorMsg = res.errors && res.errors.length > 0 ? res.errors.join(', ') : res.message;
+                    setNotice({ status: 'warning', message: `Partially failed: ${errorMsg}` });
+                }
+            })
+            .catch((error) => {
+                console.error('Error sending manual push notification:', error);
+                const errorMsg = error.message || 'Failed to send manual push notification.';
+                setNotice({ status: 'error', message: errorMsg });
+                setIsSendingPush(false);
             });
     };
 
@@ -278,7 +365,9 @@ const AdminDashboard = () => {
                 election_theme_products_subtitle: productsSubtitle,
                 election_theme_products_empty_text: productsEmptyText,
                 election_theme_products_cta_text: productsCtaText,
-                election_theme_products_global_phone: productsGlobalPhone
+                election_theme_products_global_phone: productsGlobalPhone,
+                election_theme_expo_access_token: expoAccessToken,
+                election_theme_enable_auto_push: enableAutoPush
             },
         })
             .then(() => {
@@ -404,8 +493,9 @@ const AdminDashboard = () => {
             { id: 'about', label: 'About Page', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg> },
             { id: 'terms', label: 'Terms & Conditions', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> },
             { id: 'privacy', label: 'Privacy Policy', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg> },
-            { id: 'newsletter', label: 'Newsletter', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H17.5C20 5 22 7 22 9.5V17z" /><path d="M2 9l10 7 10-7" /></svg> },
             { id: 'products', label: 'Products Page', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> },
+            { id: 'newsletter', label: 'Newsletter', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H17.5C20 5 22 7 22 9.5V17z" /><path d="M2 9l10 7 10-7" /></svg> },
+            { id: 'push', label: 'Push Notifications', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg> },
             { id: 'social', label: 'Social Media', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg> },
         ];
 
@@ -450,6 +540,192 @@ const AdminDashboard = () => {
 
                 <div className="dashboard-content">
                     <div className="settings-card">
+                        {activeTab === 'push' && (
+                            <div className="settings-section">
+                                <h2 className="settings-section-title">Push Notifications Settings</h2>
+
+                                <div className="settings-group" style={{ marginBottom: '40px' }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', color: '#fff' }}>Configuration</h3>
+                                    <PanelRow style={{ marginBottom: '20px' }}>
+                                        <div style={{ width: '100%' }}>
+                                            <ToggleControl
+                                                label="Automatic Push Notifications on Publish"
+                                                help="Automatically send a push notification to all users when a new news post is published."
+                                                checked={enableAutoPush}
+                                                onChange={(val) => setEnableAutoPush(val)}
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                    <PanelRow>
+                                        <div style={{ width: '100%' }}>
+                                            <TextControl
+                                                label="Expo Push Access Token"
+                                                value={expoAccessToken}
+                                                onChange={(val) => setExpoAccessToken(val)}
+                                                placeholder="Ex: ExT-..."
+                                                help="Optional. Paste your Expo Push Access Token if you have access token authentication enabled for your Expo project."
+                                            />
+                                        </div>
+                                    </PanelRow>
+                                </div>
+
+                                <div className="settings-group" style={{ paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', marginBottom: '40px' }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', color: '#fff' }}>Send Manual Push Notification</h3>
+                                    
+                                    <PanelRow style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                                        <TextControl
+                                            label="Notification Title"
+                                            value={manualPushTitle}
+                                            onChange={(val) => setManualPushTitle(val)}
+                                            placeholder="Compose a catchy title..."
+                                        />
+                                        <TextControl
+                                            label="Notification Body / Message"
+                                            value={manualPushBody}
+                                            onChange={(val) => setManualPushBody(val)}
+                                            placeholder="Type your message details here..."
+                                        />
+                                        
+                                        <div style={{ marginTop: '10px' }}>
+                                            <Button 
+                                                onClick={handleSendManualPush} 
+                                                disabled={isSendingPush || !manualPushTitle || !manualPushBody}
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #FACC15 0%, #EAB308 100%)',
+                                                    color: '#000',
+                                                    borderRadius: '8px',
+                                                    padding: '10px 24px',
+                                                    height: 'auto',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '700',
+                                                    transition: 'all 0.3s ease',
+                                                    cursor: 'pointer',
+                                                    border: 'none',
+                                                    boxShadow: '0 4px 15px rgba(250, 204, 21, 0.2)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(250, 204, 21, 0.4)';
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    e.currentTarget.style.transform = 'none';
+                                                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(250, 204, 21, 0.2)';
+                                                }}
+                                            >
+                                                {isSendingPush ? <Spinner /> : (
+                                                    <>
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                                                        Send Notification
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </PanelRow>
+                                </div>
+
+                                <div style={{ paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0 }}>Registered Devices / Tokens</h3>
+                                        <Button 
+                                            onClick={fetchPushTokens} 
+                                            disabled={isFetchingTokens}
+                                            style={{
+                                                background: 'rgba(250, 204, 21, 0.1)',
+                                                border: '1px solid #FACC15',
+                                                color: '#FACC15',
+                                                borderRadius: '8px',
+                                                padding: '8px 16px',
+                                                height: 'auto',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '600',
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 0 10px rgba(250, 204, 21, 0.1)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                            onMouseOver={(e) => {
+                                                e.currentTarget.style.background = '#FACC15';
+                                                e.currentTarget.style.color = '#000';
+                                                e.currentTarget.style.boxShadow = '0 0 20px rgba(250, 204, 21, 0.4)';
+                                            }}
+                                            onMouseOut={(e) => {
+                                                e.currentTarget.style.background = 'rgba(250, 204, 21, 0.1)';
+                                                e.currentTarget.style.color = '#FACC15';
+                                                e.currentTarget.style.boxShadow = '0 0 10px rgba(250, 204, 21, 0.1)';
+                                            }}
+                                        >
+                                            {isFetchingTokens ? <Spinner /> : (
+                                                <>
+                                                    <span className="dashicons dashicons-update" style={{ fontSize: '16px', width: '16px', height: '16px' }}></span>
+                                                    Refresh List
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+
+                                    {pushTokens.length === 0 ? (
+                                        <div style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                                            No devices registered yet.
+                                        </div>
+                                    ) : (
+                                        <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                <thead>
+                                                    <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>Device / Platform</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>Expo Token</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>User / Email</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15' }}>Registered At</th>
+                                                        <th style={{ padding: '15px', color: '#FACC15', textAlign: 'right' }}>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {pushTokens.map((token, idx) => (
+                                                        <tr key={token.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            <td style={{ padding: '12px 15px', color: '#fff' }}>
+                                                                <strong style={{ display: 'block' }}>{token.device_name || 'Unknown Device'}</strong>
+                                                                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>{token.platform || 'Unknown Platform'}</span>
+                                                            </td>
+                                                            <td style={{ padding: '12px 15px', color: '#fff', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                                                {token.expo_token || 'N/A'}
+                                                            </td>
+                                                            <td style={{ padding: '12px 15px', color: '#fff' }}>
+                                                                {token.user_id ? (
+                                                                    <>
+                                                                        <span style={{ display: 'block' }}>{token.display_name || `User ID: ${token.user_id}`}</span>
+                                                                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>{token.user_email}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Guest</span>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.5)' }}>
+                                                                {new Date(token.created_at).toLocaleDateString()}
+                                                            </td>
+                                                            <td style={{ padding: '12px 15px', textAlign: 'right' }}>
+                                                                <Button 
+                                                                    isDestructive 
+                                                                    isSmall 
+                                                                    onClick={() => handleDeletePushToken(token.id)}
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'social' && (
                             <div className="settings-section">
                                 <h2 className="settings-section-title">Social Media Links</h2>

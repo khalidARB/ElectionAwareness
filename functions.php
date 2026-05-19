@@ -1469,6 +1469,20 @@ function election_register_settings()
         'show_in_rest' => true,
         'sanitize_callback' => 'sanitize_text_field',
     ));
+
+    register_setting('election_theme_options_group', 'election_theme_expo_access_token', array(
+        'type' => 'string',
+        'default' => '',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_enable_auto_push', array(
+        'type' => 'boolean',
+        'default' => true,
+        'show_in_rest' => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+    ));
 }
 
 function election_awareness_customize_footer($wp_customize)
@@ -1858,6 +1872,30 @@ function election_register_api_routes() {
         'callback' => 'election_register_push_token_rest_api',
         'permission_callback' => '__return_true',
     ));
+
+    register_rest_route('election/v1', '/push-tokens', array(
+        'methods'  => 'GET',
+        'callback' => 'election_get_push_tokens_rest_api',
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        },
+    ));
+
+    register_rest_route('election/v1', '/push-tokens/(?P<id>\d+)', array(
+        'methods'  => 'DELETE',
+        'callback' => 'election_delete_push_token_rest_api',
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        },
+    ));
+
+    register_rest_route('election/v1', '/send-manual-push', array(
+        'methods'  => 'POST',
+        'callback' => 'election_send_manual_push_rest_api',
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        },
+    ));
 }
 add_action('rest_api_init', 'election_register_api_routes');
 
@@ -1970,13 +2008,27 @@ function election_register_push_token_rest_api($request) {
     $native_token = isset($params['native_token']) ? sanitize_text_field($params['native_token']) : '';
     $platform = isset($params['platform']) ? sanitize_text_field($params['platform']) : '';
     $device_name = isset($params['device_name']) ? sanitize_text_field($params['device_name']) : '';
+    $action = isset($params['action']) ? sanitize_text_field($params['action']) : 'register';
 
     if (empty($expo_token) && empty($native_token)) {
         return new WP_Error('missing_token', 'Expo token or native token is required.', array('status' => 400));
     }
 
-    $user_id = get_current_user_id() ?: null;
     $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    if ($action === 'unregister') {
+        if (!empty($native_token)) {
+            $wpdb->delete($table_name, array('native_token' => $native_token), array('%s'));
+        } elseif (!empty($expo_token)) {
+            $wpdb->delete($table_name, array('expo_token' => $expo_token), array('%s'));
+        }
+        return rest_ensure_response(array(
+            'success' => true,
+            'message' => 'Token unregistered successfully.'
+        ));
+    }
+
+    $user_id = get_current_user_id() ?: null;
 
     // 1. Create table if not exists dynamically
     $charset_collate = $wpdb->get_charset_collate();
@@ -2047,6 +2099,12 @@ function election_send_push_notification_on_publish($new_status, $old_status, $p
         return; 
     }
 
+    // Check if auto push is enabled
+    $auto_push = get_option('election_theme_enable_auto_push', true);
+    if (!$auto_push) {
+        return;
+    }
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'election_push_tokens';
 
@@ -2077,11 +2135,121 @@ function election_send_push_notification_on_publish($new_status, $old_status, $p
             );
         }
 
+        $headers = array('Content-Type' => 'application/json');
+        $access_token = get_option('election_theme_expo_access_token');
+        if (!empty($access_token)) {
+            $headers['Authorization'] = 'Bearer ' . sanitize_text_field($access_token);
+        }
+
         wp_remote_post('https://exp.host/--/api/v2/push/send', array(
-            'headers' => array('Content-Type' => 'application/json'),
+            'headers' => $headers,
             'body'    => json_encode($messages),
             'timeout' => 15,
         ));
     }
 }
 add_action('transition_post_status', 'election_send_push_notification_on_publish', 10, 3);
+
+/**
+ * REST API Callback to Retrieve Push Tokens
+ */
+function election_get_push_tokens_rest_api($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) !== $table_name) {
+        return array();
+    }
+
+    $results = $wpdb->get_results("SELECT t.*, u.user_email, u.display_name FROM $table_name t LEFT JOIN {$wpdb->users} u ON t.user_id = u.ID ORDER BY t.created_at DESC", ARRAY_A);
+    
+    return rest_ensure_response($results ? $results : array());
+}
+
+/**
+ * REST API Callback to Delete Push Token
+ */
+function election_delete_push_token_rest_api($request) {
+    global $wpdb;
+    $id = $request->get_param('id');
+    $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) !== $table_name) {
+        return new WP_Error('table_missing', 'Push tokens table does not exist.', array('status' => 500));
+    }
+
+    $deleted = $wpdb->delete($table_name, array('id' => $id), array('%d'));
+
+    if ($deleted === false) {
+        return new WP_Error('delete_error', 'Database error: ' . $wpdb->last_error, array('status' => 500));
+    }
+
+    return rest_ensure_response(array('success' => true, 'message' => 'Token deleted successfully.'));
+}
+
+/**
+ * REST API Callback to Send Manual Push Notification
+ */
+function election_send_manual_push_rest_api($request) {
+    global $wpdb;
+    $params = $request->get_json_params();
+    $title = isset($params['title']) ? sanitize_text_field($params['title']) : '';
+    $body = isset($params['body']) ? sanitize_text_field($params['body']) : '';
+
+    if (empty($title) || empty($body)) {
+        return new WP_Error('missing_fields', 'Title and body are required.', array('status' => 400));
+    }
+
+    $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) !== $table_name) {
+        return new WP_Error('table_missing', 'Push tokens table does not exist.', array('status' => 500));
+    }
+
+    $tokens = $wpdb->get_col("SELECT expo_token FROM $table_name WHERE expo_token != ''");
+
+    if (empty($tokens)) {
+        return array('success' => true, 'sent_count' => 0, 'message' => 'No registered devices found.');
+    }
+
+    $chunks = array_chunk($tokens, 100);
+    $sent_count = 0;
+    $errors = array();
+
+    foreach ($chunks as $chunk) {
+        $messages = array();
+        foreach ($chunk as $token) {
+            $messages[] = array(
+                'to' => $token,
+                'title' => $title,
+                'body' => $body,
+                'sound' => 'default',
+            );
+        }
+
+        $headers = array('Content-Type' => 'application/json');
+        $access_token = get_option('election_theme_expo_access_token');
+        if (!empty($access_token)) {
+            $headers['Authorization'] = 'Bearer ' . sanitize_text_field($access_token);
+        }
+
+        $response = wp_remote_post('https://exp.host/--/api/v2/push/send', array(
+            'headers' => $headers,
+            'body'    => json_encode($messages),
+            'timeout' => 15,
+        ));
+
+        if (is_wp_error($response)) {
+            $errors[] = $response->get_error_message();
+        } else {
+            $sent_count += count($chunk);
+        }
+    }
+
+    return rest_ensure_response(array(
+        'success' => empty($errors),
+        'sent_count' => $sent_count,
+        'errors' => $errors,
+        'message' => empty($errors) ? sprintf('Push notifications sent successfully to %d devices.', $sent_count) : 'Some notifications failed to send.'
+    ));
+}

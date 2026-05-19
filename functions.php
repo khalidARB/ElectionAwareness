@@ -1852,6 +1852,12 @@ function election_register_api_routes() {
         'callback' => 'election_register_user_rest_api',
         'permission_callback' => '__return_true',
     ));
+
+    register_rest_route('election/v1', '/register-push-token', array(
+        'methods'  => 'POST',
+        'callback' => 'election_register_push_token_rest_api',
+        'permission_callback' => '__return_true',
+    ));
 }
 add_action('rest_api_init', 'election_register_api_routes');
 
@@ -1948,3 +1954,134 @@ function election_sanitize_json_settings($input) {
  * GitHub Theme Updater
  */
 require_once get_template_directory() . '/inc/updater.php';
+
+/**
+ * --- Custom Push Notification System ---
+ */
+
+/**
+ * REST API Callback to Register Push Tokens (Supports Expo & Native Device Tokens)
+ */
+function election_register_push_token_rest_api($request) {
+    global $wpdb;
+    $params = $request->get_json_params();
+    
+    $expo_token = isset($params['expo_token']) ? sanitize_text_field($params['expo_token']) : '';
+    $native_token = isset($params['native_token']) ? sanitize_text_field($params['native_token']) : '';
+    $platform = isset($params['platform']) ? sanitize_text_field($params['platform']) : '';
+    $device_name = isset($params['device_name']) ? sanitize_text_field($params['device_name']) : '';
+
+    if (empty($expo_token) && empty($native_token)) {
+        return new WP_Error('missing_token', 'Expo token or native token is required.', array('status' => 400));
+    }
+
+    $user_id = get_current_user_id() ?: null;
+    $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    // 1. Create table if not exists dynamically
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        user_id bigint(20) DEFAULT NULL,
+        expo_token varchar(255) DEFAULT NULL,
+        native_token varchar(255) DEFAULT NULL,
+        platform varchar(50) DEFAULT NULL,
+        device_name varchar(100) DEFAULT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+
+    // 2. Check if this token is already registered
+    $existing = null;
+    if (!empty($native_token)) {
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE native_token = %s", $native_token));
+    } elseif (!empty($expo_token)) {
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE expo_token = %s", $expo_token));
+    }
+
+    if ($existing) {
+        $wpdb->update(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'expo_token' => $expo_token,
+                'native_token' => $native_token,
+                'platform' => $platform,
+                'device_name' => $device_name
+            ),
+            array('id' => $existing->id)
+        );
+        $message = 'Token updated successfully.';
+    } else {
+        $wpdb->insert(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'expo_token' => $expo_token,
+                'native_token' => $native_token,
+                'platform' => $platform,
+                'device_name' => $device_name
+            )
+        );
+        $message = 'Token registered successfully.';
+    }
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'message' => $message
+    ));
+}
+
+/**
+ * Hook to send automatic push notifications to all users when a new post is published
+ */
+function election_send_push_notification_on_publish($new_status, $old_status, $post) {
+    if ($new_status !== 'publish' || $old_status === 'publish') {
+        return; 
+    }
+
+    if ($post->post_type !== 'post') {
+        return; 
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'election_push_tokens';
+
+    if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) !== $table_name) {
+        return;
+    }
+
+    $tokens = $wpdb->get_col("SELECT expo_token FROM $table_name WHERE expo_token != ''");
+
+    if (empty($tokens)) {
+        return;
+    }
+
+    $chunks = array_chunk($tokens, 100);
+
+    foreach ($chunks as $chunk) {
+        $messages = array();
+        foreach ($chunk as $token) {
+            $messages[] = array(
+                'to' => $token,
+                'title' => '📢 New Post: ' . $post->post_title,
+                'body' => wp_strip_all_tags($post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 20)),
+                'sound' => 'default',
+                'data' => array(
+                    'postId' => $post->ID,
+                    'postTitle' => $post->post_title
+                )
+            );
+        }
+
+        wp_remote_post('https://exp.host/--/api/v2/push/send', array(
+            'headers' => array('Content-Type' => 'application/json'),
+            'body'    => json_encode($messages),
+            'timeout' => 15,
+        ));
+    }
+}
+add_action('transition_post_status', 'election_send_push_notification_on_publish', 10, 3);

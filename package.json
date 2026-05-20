@@ -1,6 +1,6 @@
 {
   "name": "election-awareness",
-  "version": "1.4.2",
+  "version": "1.4.4",
   "description": "A React-powered WordPress theme.",
   "scripts": {
     "build": "wp-scripts build",

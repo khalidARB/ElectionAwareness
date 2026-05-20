@@ -47,7 +47,7 @@
                     } else {
                         ?>
                         <a href="<?php echo esc_url(home_url('/')); ?>" rel="home" class="logo-link">
-                            <span class="logo-text-white">Election</span><span class="logo-text-yellow">Awareness</span>
+                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/logo-color.png" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="custom-logo" style="max-height: 50px;">
                         </a>
                         <?php
                     }

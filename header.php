@@ -148,6 +148,13 @@
 
                 <!-- Actions -->
                 <div class="header-actions">
+                    <?php if (is_user_logged_in()) : ?>
+                        <a href="<?php echo esc_url(home_url('/my-account/')); ?>" class="auth-btn">Account</a>
+                        <a href="<?php echo esc_url(wp_logout_url(home_url())); ?>" class="auth-btn auth-btn-outline">Logout</a>
+                    <?php else : ?>
+                        <a href="#" class="auth-btn" data-auth-action="login">Sign In</a>
+                        <a href="#" class="auth-btn auth-btn-outline" data-auth-action="register">Sign Up</a>
+                    <?php endif; ?>
                     <button class="search-toggle" aria-label="Search">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

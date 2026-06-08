@@ -228,6 +228,12 @@ function election_awareness_scripts()
         }
     ";
     wp_add_inline_style('election-style', $custom_css);
+
+    // Enqueue Auth Modal Script
+    wp_enqueue_script('election-auth-modal', get_template_directory_uri() . '/assets/js/auth-modal.js', array(), '1.0', true);
+    wp_localize_script('election-auth-modal', 'electionAuth', array(
+        'ajax_url' => admin_url('admin-ajax.php')
+    ));
 }
 add_action('wp_enqueue_scripts', 'election_awareness_scripts');
 
@@ -1867,6 +1873,14 @@ function election_register_api_routes() {
         'permission_callback' => '__return_true',
     ));
 
+    register_rest_route('election/v1', '/update-profile', array(
+        'methods'  => 'POST',
+        'callback' => 'election_update_profile_rest_api',
+        'permission_callback' => function () {
+            return is_user_logged_in(); // Requires JWT token or logged in session
+        },
+    ));
+
     register_rest_route('election/v1', '/register-push-token', array(
         'methods'  => 'POST',
         'callback' => 'election_register_push_token_rest_api',
@@ -1901,35 +1915,134 @@ add_action('rest_api_init', 'election_register_api_routes');
 
 function election_register_user_rest_api($request) {
     $params = $request->get_json_params();
-    $username = sanitize_user($params['username']);
+    $phone = sanitize_text_field($params['phone']);
     $email = sanitize_email($params['email']);
     $password = $params['password'];
-    $nickname = sanitize_text_field($params['name']);
+    $name = sanitize_text_field($params['name']);
 
-    if (empty($username) || empty($email) || empty($password)) {
-        return new WP_Error('missing_fields', 'Username, email and password are required.', array('status' => 400));
+    if (empty($name) || empty($phone) || empty($password)) {
+        return new WP_Error('missing_fields', 'Name, phone number, and password are required.', array('status' => 400));
     }
 
-    if (username_exists($username) || email_exists($email)) {
-        return new WP_Error('user_exists', 'User already exists.', array('status' => 400));
+    if (!preg_match('/^(?:\+88|88)?(01[3-9]\d{8})$/', $phone)) {
+        return new WP_Error('invalid_phone', 'Please enter a valid Bangladesh phone number.', array('status' => 400));
     }
 
-    $user_id = wp_create_user($username, $password, $email);
+    if (username_exists($phone)) {
+        return new WP_Error('user_exists', 'Phone number is already registered.', array('status' => 400));
+    }
+    
+    if (!empty($email) && email_exists($email)) {
+        return new WP_Error('email_exists', 'Email address is already in use.', array('status' => 400));
+    }
+    
+    if (empty($email)) {
+        $email = $phone . '@dummy.com';
+    }
+
+    $userdata = array(
+        'user_login'   => $phone,
+        'user_pass'    => $password,
+        'user_email'   => $email,
+        'display_name' => $name,
+        'first_name'   => $name,
+        'role'         => 'subscriber'
+    );
+    
+    $user_id = wp_insert_user($userdata);
 
     if (is_wp_error($user_id)) {
-        return $user_id;
+        return new WP_Error('registration_failed', $user_id->get_error_message(), array('status' => 500));
     }
 
-    wp_update_user(array(
-        'ID' => $user_id,
-        'display_name' => $nickname,
-        'nickname' => $nickname
-    ));
-
+    update_user_meta($user_id, 'billing_phone', $phone);
+    update_user_meta($user_id, 'user_phone', $phone);
     return rest_ensure_response(array(
         'success' => true,
         'message' => 'User registered successfully!',
         'user_id' => $user_id
+    ));
+}
+
+function election_update_profile_rest_api($request) {
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return new WP_Error('not_logged_in', 'You must be logged in to update your profile.', array('status' => 401));
+    }
+
+    $current_user = get_userdata($user_id);
+    $params = $request->get_params(); // handles multipart and json
+    
+    $name = isset($params['name']) ? sanitize_text_field($params['name']) : '';
+    $phone = isset($params['phone']) ? sanitize_text_field($params['phone']) : '';
+    $email = isset($params['email']) ? sanitize_email($params['email']) : '';
+    $password = isset($params['password']) ? $params['password'] : '';
+
+    $userdata = array('ID' => $user_id);
+
+    if (!empty($name)) {
+        $userdata['display_name'] = $name;
+        $userdata['first_name'] = $name;
+    }
+
+    if (!empty($phone)) {
+        if (!preg_match('/^(?:\+88|88)?(01[3-9]\d{8})$/', $phone)) {
+            return new WP_Error('invalid_phone', 'Please enter a valid Bangladesh phone number.', array('status' => 400));
+        }
+        update_user_meta($user_id, 'billing_phone', $phone);
+        update_user_meta($user_id, 'user_phone', $phone);
+    }
+
+    if (!empty($email) && $email !== $current_user->user_email) {
+        if (!email_exists($email)) {
+            $userdata['user_email'] = $email;
+        } else {
+            return new WP_Error('email_exists', 'Email address is already in use.', array('status' => 400));
+        }
+    } else if (empty($email) && !empty($phone)) {
+        if (strpos($current_user->user_email, '@dummy.com') === false) {
+            $userdata['user_email'] = $phone . '@dummy.com';
+        }
+    }
+
+    if (!empty($password)) {
+        $userdata['user_pass'] = $password;
+    }
+
+    $files = $request->get_file_params();
+    $avatar_url = get_user_meta($user_id, 'custom_avatar_url', true);
+    
+    if (!empty($files['avatar']) && $files['avatar']['error'] === UPLOAD_ERR_OK) {
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        $upload_overrides = array('test_form' => false);
+        $uploaded_file = wp_handle_upload($files['avatar'], $upload_overrides);
+        
+        if (isset($uploaded_file['file'])) {
+            $avatar_url = $uploaded_file['url'];
+            update_user_meta($user_id, 'custom_avatar_url', $avatar_url);
+        } else {
+            return new WP_Error('upload_error', $uploaded_file['error'], array('status' => 500));
+        }
+    }
+
+    $update_id = wp_update_user($userdata);
+
+    if (is_wp_error($update_id)) {
+        return new WP_Error('update_failed', $update_id->get_error_message(), array('status' => 500));
+    }
+
+    $updated_user = get_userdata($user_id);
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'message' => 'Profile updated successfully!',
+        'user' => array(
+            'id' => $user_id,
+            'name' => $updated_user->display_name,
+            'email' => strpos($updated_user->user_email, '@dummy.com') === false ? $updated_user->user_email : '',
+            'phone' => get_user_meta($user_id, 'billing_phone', true),
+            'avatar_url' => $avatar_url
+        )
     ));
 }
 
@@ -2252,4 +2365,210 @@ function election_send_manual_push_rest_api($request) {
         'errors' => $errors,
         'message' => empty($errors) ? sprintf('Push notifications sent successfully to %d devices.', $sent_count) : 'Some notifications failed to send.'
     ));
+}
+
+/**
+ * Auth Modal AJAX Handlers
+ */
+function election_custom_login() {
+    check_ajax_referer('ajax-login-nonce', 'security-login');
+    
+    $user_login = sanitize_text_field($_POST['login_user']);
+    $password = $_POST['login_password'];
+    
+    if (empty($user_login) || empty($password)) {
+        wp_send_json_error(array('message' => 'Both fields are required.'));
+    }
+
+    $creds = array(
+        'user_login'    => $user_login,
+        'user_password' => $password,
+        'remember'      => true
+    );
+    
+    $user = wp_signon($creds, false);
+    
+    if (is_wp_error($user)) {
+        wp_send_json_error(array('message' => 'Invalid credentials.'));
+    }
+    
+    wp_send_json_success(array('message' => 'Login successful.'));
+}
+add_action('wp_ajax_nopriv_custom_login', 'election_custom_login');
+add_action('wp_ajax_custom_login', 'election_custom_login');
+
+function election_custom_register() {
+    check_ajax_referer('ajax-register-nonce', 'security-register');
+    
+    $name = sanitize_text_field($_POST['reg_name']);
+    $phone = sanitize_text_field($_POST['reg_phone']);
+    $email = sanitize_email($_POST['reg_email']);
+    $password = $_POST['reg_password'];
+    
+    if (empty($name) || empty($phone) || empty($password)) {
+        wp_send_json_error(array('message' => 'Name, Phone, and Password are required.'));
+    }
+    
+    if (!preg_match('/^(?:\+88|88)?(01[3-9]\d{8})$/', $phone)) {
+        wp_send_json_error(array('message' => 'Please enter a valid Bangladesh phone number.'));
+    }
+    
+    if (username_exists($phone)) {
+        wp_send_json_error(array('message' => 'Phone number is already registered.'));
+    }
+    
+    if (!empty($email) && email_exists($email)) {
+        wp_send_json_error(array('message' => 'Email address is already in use.'));
+    }
+    
+    if (empty($email)) {
+        $email = $phone . '@dummy.com';
+    }
+    
+    $userdata = array(
+        'user_login' => $phone,
+        'user_pass'  => $password,
+        'user_email' => $email,
+        'display_name' => $name,
+        'first_name' => $name,
+        'role'       => 'subscriber'
+    );
+    
+    $user_id = wp_insert_user($userdata);
+    
+    if (is_wp_error($user_id)) {
+        wp_send_json_error(array('message' => $user_id->get_error_message()));
+    }
+    
+    update_user_meta($user_id, 'billing_phone', $phone);
+    update_user_meta($user_id, 'user_phone', $phone);
+    
+    // Auto-login after registration
+    $creds = array(
+        'user_login'    => $phone,
+        'user_password' => $password,
+        'remember'      => true
+    );
+    wp_signon($creds, false);
+    
+    wp_send_json_success(array('message' => 'Registration successful.'));
+}
+add_action('wp_ajax_nopriv_custom_register', 'election_custom_register');
+add_action('wp_ajax_custom_register', 'election_custom_register');
+
+/**
+ * Restrict Dashboard Access for Subscribers
+ */
+function election_restrict_admin_access() {
+    if (is_admin() && !defined('DOING_AJAX') && current_user_can('subscriber')) {
+        wp_redirect(home_url('/my-account/'));
+        exit;
+    }
+}
+add_action('admin_init', 'election_restrict_admin_access');
+
+/**
+ * User Data Center Admin Menu
+ */
+function election_app_users_data_center_menu() {
+    add_menu_page(
+        'App Users Data Center', // Page title
+        'Data Center',           // Menu title
+        'manage_options',        // Capability
+        'app-users-data-center', // Menu slug
+        'election_app_users_data_center_page', // Callback function
+        'dashicons-groups',      // Icon
+        30                       // Position
+    );
+}
+add_action('admin_menu', 'election_app_users_data_center_menu');
+
+function election_app_users_data_center_page() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    // Handle Delete Action
+    if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['user_id'])) {
+        $delete_id = intval($_GET['user_id']);
+        if (wp_delete_user($delete_id)) {
+            echo '<div class="notice notice-success is-dismissible"><p>User deleted successfully.</p></div>';
+        }
+    }
+
+    $args = array(
+        'role'    => 'subscriber',
+        'orderby' => 'registered',
+        'order'   => 'DESC',
+    );
+    $user_query = new WP_User_Query($args);
+    $users = $user_query->get_results();
+
+    ?>
+    <div class="wrap">
+        <h1 class="wp-heading-inline">App Users Data Center</h1>
+        <p>Manage users who have registered through the app or website front-end.</p>
+        <hr class="wp-header-end">
+        
+        <style>
+            .data-center-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.04); border: 1px solid #ccd0d4; }
+            .data-center-table th, .data-center-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f0f0f1; }
+            .data-center-table th { background: #f6f7f7; font-weight: 600; color: #2c3338; border-bottom: 2px solid #ccd0d4; }
+            .data-center-table tr:hover { background-color: #f6f7f7; }
+            .action-links a { color: #d63638; text-decoration: none; }
+            .action-links a:hover { text-decoration: underline; color: #b32d2e; }
+            .phone-badge { background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; display: inline-block; }
+            .date-muted { color: #646970; font-size: 13px; }
+        </style>
+
+        <table class="data-center-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Avatar</th>
+                    <th>Full Name</th>
+                    <th>Phone Number</th>
+                    <th>Email</th>
+                    <th>Registration Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($users)) : ?>
+                    <?php foreach ($users as $user) : 
+                        $phone = get_user_meta($user->ID, 'billing_phone', true);
+                        if (empty($phone)) $phone = get_user_meta($user->ID, 'user_phone', true);
+                        if (empty($phone)) $phone = $user->user_login; // Fallback if phone is username
+                        $email = strpos($user->user_email, '@dummy.com') !== false ? '<em style="color:#8c8f94;">Not Provided</em>' : esc_html($user->user_email);
+                        $avatar_url = get_user_meta($user->ID, 'custom_avatar_url', true);
+                        ?>
+                        <tr>
+                            <td><?php echo esc_html($user->ID); ?></td>
+                            <td>
+                                <?php if ($avatar_url): ?>
+                                    <img src="<?php echo esc_url($avatar_url); ?>" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="Avatar">
+                                <?php else: ?>
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; color: #666;">
+                                        <span class="dashicons dashicons-admin-users"></span>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td><strong><?php echo esc_html($user->display_name); ?></strong></td>
+                            <td><span class="phone-badge"><?php echo esc_html($phone ?: 'N/A'); ?></span></td>
+                            <td><?php echo $email; ?></td>
+                            <td class="date-muted"><?php echo esc_html(date('M j, Y, g:i a', strtotime($user->user_registered))); ?></td>
+                            <td class="action-links">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=app-users-data-center&action=delete&user_id=' . $user->ID)); ?>" onclick="return confirm('Are you sure you want to permanently delete this user?');">Delete User</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #646970;">No app users found.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
 }

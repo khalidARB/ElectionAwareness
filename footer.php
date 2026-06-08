@@ -148,6 +148,59 @@ if (!is_page('contact') && !is_page_template('template-contact.php')) {
 <div id="mobile-menu-overlay"></div>
 <div id="search-overlay-root"></div>
 
+<!-- Auth Modal -->
+<div id="auth-modal" class="auth-modal-overlay">
+    <div class="auth-modal-container">
+        <button class="auth-modal-close" aria-label="Close modal">&times;</button>
+        <div class="auth-modal-header">
+            <h2 class="auth-modal-title">Sign In</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-target="login">Sign In</button>
+                <button class="auth-tab" data-target="register">Sign Up</button>
+            </div>
+        </div>
+        <div class="auth-modal-body">
+            <!-- Login Form -->
+            <form id="auth-login-form" class="auth-form active">
+                <div class="auth-form-group">
+                    <label for="login-user">Email or Phone Number</label>
+                    <input type="text" id="login-user" name="login_user" placeholder="e.g. 01712345678 or email" required>
+                </div>
+                <div class="auth-form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="login_password" required>
+                </div>
+                <div class="auth-form-messages" id="login-messages"></div>
+                <button type="submit" class="btn btn-primary auth-submit">Sign In</button>
+                <?php wp_nonce_field('ajax-login-nonce', 'security-login'); ?>
+            </form>
+
+            <!-- Registration Form -->
+            <form id="auth-register-form" class="auth-form">
+                <div class="auth-form-group">
+                    <label for="reg-name">Full Name *</label>
+                    <input type="text" id="reg-name" name="reg_name" required>
+                </div>
+                <div class="auth-form-group">
+                    <label for="reg-phone">Phone Number *</label>
+                    <input type="tel" id="reg-phone" name="reg_phone" placeholder="e.g. 01712345678" required>
+                </div>
+                <div class="auth-form-group">
+                    <label for="reg-email">Email (Optional)</label>
+                    <input type="email" id="reg-email" name="reg_email">
+                </div>
+                <div class="auth-form-group">
+                    <label for="reg-password">Password *</label>
+                    <input type="password" id="reg-password" name="reg_password" required>
+                </div>
+                <div class="auth-form-messages" id="register-messages"></div>
+                <button type="submit" class="btn btn-primary auth-submit">Sign Up</button>
+                <?php wp_nonce_field('ajax-register-nonce', 'security-register'); ?>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php wp_footer(); ?>
 
 </body>

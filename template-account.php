@@ -154,6 +154,9 @@ if (empty($current_phone)) {
             </div>
             
             <button type="submit" class="btn btn-primary account-submit-btn" style="width: 100%; padding: 15px; font-size: 16px;">Update Profile</button>
+            <div style="margin-top: 15px; text-align: center;">
+                <a href="<?php echo esc_url(wp_logout_url(home_url())); ?>" class="auth-btn auth-btn-outline" style="width: 100%; display: block; padding: 15px; border-radius: var(--border-radius-lg); font-size: 16px;">Logout</a>
+            </div>
         </form>
     </div>
 </div>

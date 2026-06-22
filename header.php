@@ -148,13 +148,53 @@
 
                 <!-- Actions -->
                 <div class="header-actions">
-                    <?php if (is_user_logged_in()) : ?>
-                        <a href="<?php echo esc_url(home_url('/my-account/')); ?>" class="auth-btn">Account</a>
-                        <a href="<?php echo esc_url(wp_logout_url(home_url())); ?>" class="auth-btn auth-btn-outline">Logout</a>
-                    <?php else : ?>
-                        <a href="#" class="auth-btn" data-auth-action="login">Sign In</a>
-                        <a href="#" class="auth-btn auth-btn-outline" data-auth-action="register">Sign Up</a>
-                    <?php endif; ?>
+                    <div class="account-dropdown-wrapper">
+                        <?php if (is_user_logged_in()) : ?>
+                            <style>
+                                .perfect-round-avatar-link {
+                                    display: block;
+                                    width: 44px !important;
+                                    height: 44px !important;
+                                    min-width: 44px !important;
+                                    min-height: 44px !important;
+                                    max-width: 44px !important;
+                                    max-height: 44px !important;
+                                    border: 2px solid var(--color-electric-yellow);
+                                    border-radius: 50% !important;
+                                    overflow: hidden !important;
+                                    padding: 0 !important;
+                                    margin: 0 !important;
+                                    box-sizing: border-box !important;
+                                    flex-shrink: 0;
+                                }
+                                .perfect-round-avatar-link img {
+                                    width: 100% !important;
+                                    height: 100% !important;
+                                    object-fit: cover !important;
+                                    border-radius: 50% !important;
+                                    display: block !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                }
+                            </style>
+                            <!-- Logged In: Only Profile Picture (Rounded) -->
+                            <a href="<?php echo esc_url(home_url('/my-account/')); ?>" class="perfect-round-avatar-link" aria-label="Account">
+                                <?php 
+                                    $current_user = wp_get_current_user();
+                                    // Fetch double size for retina displays, but display at 44x44
+                                    echo get_avatar($current_user->ID, 88, '', 'Profile Picture'); 
+                                ?>
+                            </a>
+                        <?php else : ?>
+                            <!-- Logged Out: Only Icon -->
+                            <a href="#" class="account-icon-trigger" aria-label="Account" data-auth-action="login">
+                                <svg class="account-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                     <button class="search-toggle" aria-label="Search">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

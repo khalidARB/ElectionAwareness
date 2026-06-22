@@ -339,6 +339,30 @@ function election_awareness_cpt_init()
         'menu_icon' => 'dashicons-cart',
     ));
 
+    // Register Feed Post CPT
+    register_post_type('feed_post', array(
+        'labels' => array(
+            'name' => __('Feed Posts', 'election-awareness'),
+            'singular_name' => __('Feed Post', 'election-awareness'),
+            'add_new' => __('Add New Feed Post', 'election-awareness'),
+            'add_new_item' => __('Add New Feed Post', 'election-awareness'),
+            'edit_item' => __('Edit Feed Post', 'election-awareness'),
+            'all_items' => __('All Feed Posts', 'election-awareness'),
+        ),
+        'public' => true,
+        'show_in_rest' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'author'),
+        'menu_icon' => 'dashicons-format-status',
+        'capabilities' => array(
+            'create_posts' => 'manage_options',
+            'edit_posts' => 'manage_options',
+            'edit_others_posts' => 'manage_options',
+            'publish_posts' => 'manage_options',
+            'read_private_posts' => 'manage_options',
+        ),
+        'map_meta_cap' => true,
+    ));
+
     // Flush rewrite rules to ensure new CPT slugs work immediately
 }
 add_action('init', 'election_awareness_cpt_init');
@@ -504,6 +528,122 @@ function product_save_meta($post_id)
         update_post_meta($post_id, '_product_contact_phone', sanitize_text_field($_POST['product_contact_phone']));
 }
 add_action('save_post', 'product_save_meta');
+
+/**
+ * Feed Post Meta Boxes
+ */
+function feed_post_add_meta_boxes()
+{
+    add_meta_box('feed_post_details', 'Feed Post Details', 'feed_post_details_callback', 'feed_post', 'normal', 'high');
+}
+add_action('add_meta_boxes', 'feed_post_add_meta_boxes');
+
+function feed_post_enqueue_admin_scripts($hook) {
+    global $typenow;
+    if ($typenow == 'feed_post' && in_array($hook, array('post.php', 'post-new.php'))) {
+        wp_enqueue_media();
+    }
+}
+add_action('admin_enqueue_scripts', 'feed_post_enqueue_admin_scripts');
+
+function feed_post_details_callback($post)
+{
+    $type = get_post_meta($post->ID, '_feed_type', true) ?: 'text';
+    $media_ids = get_post_meta($post->ID, '_feed_media_ids', true) ?: '';
+
+    wp_nonce_field('feed_post_details_nonce', 'feed_post_details_nonce');
+    ?>
+    <p>
+        <label>Post Type:</label><br>
+        <select name="feed_type" style="width:100%;">
+            <option value="text" <?php selected($type, 'text'); ?>>Text Only</option>
+            <option value="image" <?php selected($type, 'image'); ?>>Image(s)</option>
+            <option value="video" <?php selected($type, 'video'); ?>>Video(s)</option>
+            <option value="gallery" <?php selected($type, 'gallery'); ?>>Mixed (Images & Videos)</option>
+        </select>
+    </p>
+
+    <div style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px;">
+        <label><strong>Attached Media (Upload or Select multiple images/videos):</strong></label>
+        <div id="feed_media_preview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; margin-bottom:10px;">
+            <?php
+            if (!empty($media_ids)) {
+                $ids = explode(',', $media_ids);
+                foreach ($ids as $att_id) {
+                    if (wp_attachment_is_image($att_id)) {
+                        echo '<div style="position:relative;" data-id="'.esc_attr($att_id).'"><img src="'.wp_get_attachment_thumb_url($att_id).'" style="width:100px; height:100px; object-fit:cover;"></div>';
+                    } else {
+                        echo '<div style="position:relative; width:100px; height:100px; background:#ddd; display:flex; align-items:center; justify-content:center; text-align:center;" data-id="'.esc_attr($att_id).'">Video<br>('.esc_html($att_id).')</div>';
+                    }
+                }
+            }
+            ?>
+        </div>
+        <input type="hidden" name="feed_media_ids" id="feed_media_ids" value="<?php echo esc_attr($media_ids); ?>">
+        <button type="button" class="button" id="feed_media_upload_btn">Select Images & Videos</button>
+        <button type="button" class="button" id="feed_media_clear_btn" style="color:red;">Clear Media</button>
+    </div>
+
+    <script>
+    jQuery(document).ready(function($){
+        var mediaUploader;
+        $('#feed_media_upload_btn').click(function(e) {
+            e.preventDefault();
+            if (mediaUploader) {
+                mediaUploader.open();
+                return;
+            }
+            mediaUploader = wp.media.frames.file_frame = wp.media({
+                title: 'Select Images or Videos',
+                button: { text: 'Select Media' },
+                multiple: true
+            });
+            mediaUploader.on('select', function() {
+                var selection = mediaUploader.state().get('selection');
+                var ids = [];
+                $('#feed_media_preview').empty();
+                selection.map(function(attachment) {
+                    attachment = attachment.toJSON();
+                    ids.push(attachment.id);
+                    if (attachment.type === 'image') {
+                        var thumbUrl = (attachment.sizes && attachment.sizes.thumbnail) ? attachment.sizes.thumbnail.url : attachment.url;
+                        $('#feed_media_preview').append('<div style="position:relative;" data-id="'+attachment.id+'"><img src="'+thumbUrl+'" style="width:100px; height:100px; object-fit:cover;"></div>');
+                    } else if (attachment.type === 'video') {
+                        $('#feed_media_preview').append('<div style="position:relative; width:100px; height:100px; background:#ddd; display:flex; align-items:center; justify-content:center; text-align:center;" data-id="'+attachment.id+'">Video<br>('+attachment.id+')</div>');
+                    }
+                });
+                $('#feed_media_ids').val(ids.join(','));
+            });
+            mediaUploader.open();
+        });
+        $('#feed_media_clear_btn').click(function(e){
+            e.preventDefault();
+            $('#feed_media_preview').empty();
+            $('#feed_media_ids').val('');
+        });
+    });
+    </script>
+    <?php
+}
+
+function feed_post_save_meta($post_id)
+{
+    if (!isset($_POST['feed_post_details_nonce']) || !wp_verify_nonce($_POST['feed_post_details_nonce'], 'feed_post_details_nonce'))
+        return;
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+        return;
+    if (!current_user_can('edit_post', $post_id))
+        return;
+    if (get_post_type($post_id) !== 'feed_post')
+        return;
+
+    if (isset($_POST['feed_type']))
+        update_post_meta($post_id, '_feed_type', sanitize_text_field($_POST['feed_type']));
+    if (isset($_POST['feed_media_ids']))
+        update_post_meta($post_id, '_feed_media_ids', sanitize_text_field($_POST['feed_media_ids']));
+}
+add_action('save_post', 'feed_post_save_meta');
+
 
 /**
  * FAQ Meta Box for Posts
@@ -1940,8 +2080,19 @@ function election_register_user_rest_api($request) {
         $email = $phone . '@dummy.com';
     }
 
+    $base_username = sanitize_title($name);
+    if (empty($base_username)) {
+        $base_username = 'user';
+    }
+    $username = $base_username;
+    $suffix = 1;
+    while (username_exists($username)) {
+        $username = $base_username . $suffix;
+        $suffix++;
+    }
+
     $userdata = array(
-        'user_login'   => $phone,
+        'user_login'   => $username,
         'user_pass'    => $password,
         'user_email'   => $email,
         'display_name' => $name,
@@ -2425,8 +2576,19 @@ function election_custom_register() {
         $email = $phone . '@dummy.com';
     }
     
+    $base_username = sanitize_title($name);
+    if (empty($base_username)) {
+        $base_username = 'user';
+    }
+    $username = $base_username;
+    $suffix = 1;
+    while (username_exists($username)) {
+        $username = $base_username . $suffix;
+        $suffix++;
+    }
+    
     $userdata = array(
-        'user_login' => $phone,
+        'user_login' => $username,
         'user_pass'  => $password,
         'user_email' => $email,
         'display_name' => $name,

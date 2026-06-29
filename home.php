@@ -10,16 +10,7 @@ get_header();
 
     <!-- Page Header & Filters -->
     <section class="blog-header container section-spacing-top">
-        <h1 class="page-title">
-            <?php
-            $heading = get_option('election_theme_all_news_heading', '');
-            if (!empty($heading)) {
-                echo esc_html($heading);
-            } else {
-                single_post_title();
-            }
-            ?>
-        </h1>
+
 
         <!-- Filters: Horizontal Scrollable Pill List with Arrows -->
         <div class="blog-filters-container">

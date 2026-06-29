@@ -117,16 +117,18 @@ get_header();
             .lightbox-prev { left: 20px; }
             .lightbox-next { right: 20px; }
 
-            .post-footer { display: flex; padding: 14px 16px; background-color: rgba(22, 31, 46, 0.3); }
-            .share-button { background: none; border: none; display: flex; align-items: center; cursor: pointer; font-size: 14px; color: var(--color-text-muted, #94A3B8); font-weight: 500; padding: 8px 16px; border-radius: 50px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: var(--font-body); gap: 8px; }
-            .share-button:hover { background-color: rgba(255, 255, 0, 0.1); color: var(--color-electric-yellow, #FFFF00); transform: translateY(-2px); }
-            .share-svg { transition: transform 0.3s ease; }
-            .share-button:hover .share-svg { transform: rotate(-5deg) scale(1.1); }
+            .post-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background-color: rgba(22, 31, 46, 0.3); border-top: 1px solid rgba(22, 31, 46, 0.6); }
+            .post-share-label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted, #94A3B8); font-weight: 600; font-family: var(--font-heading); }
+            .post-share-icons { display: flex; gap: 8px; }
+            .post-share-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background-color: var(--color-midnight-blue, #0A1019); color: var(--color-text-muted, #94A3B8); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255, 255, 255, 0.05); text-decoration: none; position: relative; }
+            .post-share-icon:hover { color: var(--color-text-white, #FFFFFF); background-color: var(--color-steel-blue, #161F2E); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-color: rgba(255, 255, 255, 0.1); }
+            
+            /* Share Toast Notification */
+            .share-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #0A1019; color: #FFF; border: 1px solid var(--color-electric-yellow, #FFFF00); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 100000; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .share-toast.active { opacity: 1; transform: translateX(-50%) translateY(0); }
         </style>
 
-        <div class="section-header-wrapper">
-            <h2 class="section-heading">Posts Feed</h2>
-        </div>
+
         <div class="posts-feed-container">
             <?php if (!empty($real_posts)): ?>
                 <?php foreach ($real_posts as $item): ?>
@@ -169,10 +171,24 @@ get_header();
                         <?php endif; ?>
                         
                         <div class="post-footer">
-                            <button class="share-button">
-                                <svg class="share-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                                Share
-                            </button>
+                            <div class="post-share-label">Share</div>
+                            <div class="post-share-icons">
+                                <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode(get_permalink($item['id'])); ?>" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" class="post-share-icon fb-share">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                                </a>
+                                <a href="#" data-action="copy-link" data-url="<?php echo esc_url(get_permalink($item['id'])); ?>" data-platform="Instagram" aria-label="Share on Instagram" class="post-share-icon ig-share">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                                </a>
+                                <a href="#" data-action="copy-link" data-url="<?php echo esc_url(get_permalink($item['id'])); ?>" data-platform="YouTube" aria-label="Share on YouTube" class="post-share-icon yt-share">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
+                                </a>
+                                <a href="https://www.linkedin.com/sharing/share-offsite/?url=<?php echo urlencode(get_permalink($item['id'])); ?>" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn" class="post-share-icon ln-share">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+                                </a>
+                                <a href="#" data-action="copy-link" data-url="<?php echo esc_url(get_permalink($item['id'])); ?>" data-platform="TikTok" aria-label="Share on TikTok" class="post-share-icon tt-share">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -276,6 +292,37 @@ get_header();
             } catch (err) {
                 console.error("Error parsing media items", err);
             }
+        });
+
+        // Copy link to clipboard for sharing
+        document.querySelectorAll('a[data-action="copy-link"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = link.getAttribute('data-url');
+                const platform = link.getAttribute('data-platform');
+                
+                navigator.clipboard.writeText(url).then(() => {
+                    // Create beautiful toast notification
+                    const toast = document.createElement('div');
+                    toast.className = 'share-toast';
+                    toast.innerText = `Link copied! Share it on ${platform}`;
+                    document.body.appendChild(toast);
+                    
+                    // Trigger fade in & out
+                    setTimeout(() => {
+                        toast.classList.add('active');
+                    }, 50);
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('active');
+                        setTimeout(() => {
+                            toast.remove();
+                        }, 300);
+                    }, 2500);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
         });
     });
     </script>

@@ -4,7 +4,7 @@ Theme URI: https://example.com/election-awareness
 Author: ARb
 Author URI: https://example.com/arb
 Description: A high-contrast "Dark Mode" React-powered theme with modern typography and fluid interactivity.
-Version: 1.4.6
+Version: 1.4.7
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -60,7 +60,7 @@ body {
 }
 
 html {
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 #page {
@@ -214,6 +214,52 @@ body.admin-bar .site-header {
 
 .main-navigation a:hover::after {
     width: 100%;
+}
+
+/* Dropdown Menus */
+.main-navigation li {
+    position: relative;
+}
+
+.main-navigation ul.sub-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: var(--color-midnight-blue);
+    min-width: 220px;
+    padding: 8px 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    z-index: 999;
+    flex-direction: column;
+    gap: 0;
+}
+
+.main-navigation li:hover > ul.sub-menu,
+.main-navigation li:focus-within > ul.sub-menu {
+    display: flex;
+}
+
+.main-navigation ul.sub-menu li {
+    width: 100%;
+}
+
+.main-navigation ul.sub-menu a {
+    padding: 10px 20px;
+    font-size: 15px;
+    display: block;
+}
+
+.main-navigation ul.sub-menu a::after {
+    display: none;
+}
+
+.main-navigation ul.sub-menu a:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--color-electric-yellow);
+    transform: none; /* override any default transform */
 }
 
 /* Actions */

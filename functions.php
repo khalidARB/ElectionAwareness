@@ -899,13 +899,13 @@ function election_force_responsive_css()
             /* Global Containment */
             html,
             body {
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
                 width: 100% !important;
                 position: relative !important;
             }
 
             .site-main {
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
             }
 
             /* Container sizing for all mobile/tablet */

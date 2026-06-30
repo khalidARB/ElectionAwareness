@@ -3,6 +3,10 @@
  * Template Name: Account Page
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Exit if accessed directly.
+}
+
 if (!is_user_logged_in()) {
     wp_redirect(home_url());
     exit;
@@ -60,14 +64,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account_nonce'
             }
 
             if (!empty($_FILES['account_avatar']) && $_FILES['account_avatar']['error'] === UPLOAD_ERR_OK) {
-                require_once(ABSPATH . 'wp-admin/includes/file.php');
-                $upload_overrides = array('test_form' => false);
-                $uploaded_file = wp_handle_upload($_FILES['account_avatar'], $upload_overrides);
-                if (isset($uploaded_file['file'])) {
-                    update_user_meta($user_id, 'custom_avatar_url', $uploaded_file['url']);
-                } else {
-                    $message = $uploaded_file['error'];
+                $file_type = wp_check_filetype($_FILES['account_avatar']['name']);
+                $allowed_types = array('image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp');
+                if (!in_array($file_type['type'], $allowed_types)) {
+                    $message = 'Only JPEG, PNG, GIF, and WEBP images are allowed.';
                     $message_type = 'error';
+                } else {
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                    $upload_overrides = array('test_form' => false);
+                    $uploaded_file = wp_handle_upload($_FILES['account_avatar'], $upload_overrides);
+                    if (isset($uploaded_file['file'])) {
+                        update_user_meta($user_id, 'custom_avatar_url', $uploaded_file['url']);
+                    } else {
+                        $message = $uploaded_file['error'];
+                        $message_type = 'error';
+                    }
                 }
             }
 

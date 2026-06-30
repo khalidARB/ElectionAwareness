@@ -2164,6 +2164,11 @@ function election_update_profile_rest_api($request) {
     $avatar_url = get_user_meta($user_id, 'custom_avatar_url', true);
     
     if (!empty($files['avatar']) && $files['avatar']['error'] === UPLOAD_ERR_OK) {
+        $file_type = wp_check_filetype($files['avatar']['name']);
+        $allowed_types = array('image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp');
+        if (!in_array($file_type['type'], $allowed_types)) {
+            return new WP_Error('invalid_file_type', 'Only JPEG, PNG, GIF, and WEBP images are allowed.', array('status' => 400));
+        }
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         $upload_overrides = array('test_form' => false);
         $uploaded_file = wp_handle_upload($files['avatar'], $upload_overrides);

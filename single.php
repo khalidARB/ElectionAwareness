@@ -3,6 +3,10 @@
  * The template for displaying all single posts
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Exit if accessed directly.
+}
+
 get_header(); ?>
 
 <div id="reading-progress-bar" class="reading-progress-bar"></div>

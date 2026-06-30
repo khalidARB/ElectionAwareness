@@ -360,7 +360,24 @@ function election_awareness_cpt_init()
             'publish_posts' => 'manage_options',
             'read_private_posts' => 'manage_options',
         ),
-        'map_meta_cap' => true,
+    ));
+
+    // Register Politician Profile CPT
+    register_post_type('politician', array(
+        'labels' => array(
+            'name' => __('Politicians', 'election-awareness'),
+            'singular_name' => __('Politician', 'election-awareness'),
+            'add_new' => __('Add New Politician', 'election-awareness'),
+            'add_new_item' => __('Add New Politician', 'election-awareness'),
+            'edit_item' => __('Edit Politician', 'election-awareness'),
+            'all_items' => __('All Politicians', 'election-awareness'),
+        ),
+        'public' => true,
+        'show_in_rest' => true,
+        'has_archive' => 'politicians',
+        'rewrite' => array('slug' => 'politicians'),
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+        'menu_icon' => 'dashicons-businessperson',
     ));
 
     // Flush rewrite rules to ensure new CPT slugs work immediately

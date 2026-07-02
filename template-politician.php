@@ -20,103 +20,60 @@ get_header(); ?>
     </header>
 
     <!-- Filters Section -->
+    <?php
+    $search_query = isset($_GET['search_query']) ? sanitize_text_field($_GET['search_query']) : '';
+    $party_filter = isset($_GET['party_filter']) ? sanitize_text_field($_GET['party_filter']) : '';
+    ?>
     <section class="directory-filters container">
         <div class="filter-controls-wrapper">
-            <input type="text" id="politician-search" placeholder="Search by name, party, or constituency..." class="search-input">
-            
-            <select id="party-filter" class="filter-select">
-                <option value="">All Parties</option>
+            <input type="text" id="politician-search" placeholder="Search by name, party, or constituency..." class="search-input" value="<?php echo esc_attr($search_query); ?>">
+            <div class="custom-dropdown" id="party-filter-dropdown">
                 <?php
-                // Fetch unique parties for filter
-                global $wpdb;
-                $table_meta = $wpdb->postmeta;
-                $parties = $wpdb->get_col("SELECT DISTINCT meta_value FROM $table_meta WHERE meta_key = '_politician_party' AND meta_value != ''");
-                foreach ($parties as $party) {
-                    echo '<option value="' . esc_attr($party) . '">' . esc_html($party) . '</option>';
+                $selected_party_label = 'All Parties';
+                if (!empty($party_filter)) {
+                    $party_post = get_post($party_filter);
+                    if ($party_post && $party_post->post_type === 'party') {
+                        $selected_party_label = $party_post->post_title;
+                    }
                 }
                 ?>
-            </select>
+                <div class="dropdown-trigger">
+                    <span class="selected-label"><?php echo esc_html($selected_party_label); ?></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="dropdown-menu">
+                    <div class="dropdown-item<?php echo empty($party_filter) ? ' active' : ''; ?>" data-value="">All Parties</div>
+                    <?php
+                    // Fetch parties from the CPT
+                    $parties_query = new WP_Query(array(
+                        'post_type' => 'party',
+                        'posts_per_page' => -1,
+                        'orderby' => 'title',
+                        'order' => 'ASC'
+                    ));
+                    if ($parties_query->have_posts()) {
+                        while ($parties_query->have_posts()) {
+                            $parties_query->the_post();
+                            $party_id = get_the_ID();
+                            $party_title = get_the_title();
+                            $is_active = ($party_filter == $party_id);
+                            echo '<div class="dropdown-item' . ($is_active ? ' active' : '') . '" data-value="' . esc_attr($party_id) . '">' . esc_html($party_title) . '</div>';
+                        }
+                        wp_reset_postdata();
+                    }
+                    ?>
+                </div>
+                <input type="hidden" id="party-filter" value="<?php echo esc_attr($party_filter); ?>">
+            </div>
         </div>
     </section>
 
     <!-- Grid Section -->
-    <section class="politicians-grid-section container section-spacing-bottom">
+    <section class="politicians-grid-section container section-spacing-bottom" id="politician-grid-container">
         <?php
-        $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
-        $args = array(
-            'post_type' => 'politician',
-            'posts_per_page' => 12,
-            'paged' => $paged,
-            'orderby' => 'title',
-            'order' => 'ASC'
-        );
-        $politician_query = new WP_Query($args);
-
-        if ($politician_query->have_posts()): ?>
-            <div class="politicians-grid" id="politicians-list">
-                <?php
-                while ($politician_query->have_posts()):
-                    $politician_query->the_post();
-                    $title = get_post_meta(get_the_ID(), '_politician_title', true) ?: 'Representative';
-                    $party = get_post_meta(get_the_ID(), '_politician_party', true) ?: 'Independent';
-                    $constituency = get_post_meta(get_the_ID(), '_politician_constituency', true) ?: 'National Assembly';
-                    $focus = get_post_meta(get_the_ID(), '_politician_focus', true) ?: 'General Reform';
-                    ?>
-                    <article <?php post_class('politician-card reveal-on-scroll'); ?> 
-                             data-name="<?php echo esc_attr(strtolower(get_the_title())); ?>"
-                             data-party="<?php echo esc_attr(strtolower($party)); ?>"
-                             data-constituency="<?php echo esc_attr(strtolower($constituency)); ?>">
-                        
-                        <div class="card-image-wrapper">
-                            <?php if (has_post_thumbnail()): ?>
-                                <?php the_post_thumbnail('medium_large', array('class' => 'card-photo')); ?>
-                            <?php else: ?>
-                                <img src="https://i.pravatar.cc/350?u=<?php the_ID(); ?>" alt="Politician Photo" class="card-photo">
-                            <?php endif; ?>
-                            
-                            <span class="card-party-badge"><?php echo esc_html($party); ?></span>
-                        </div>
-
-                        <div class="card-details">
-                            <span class="card-label"><?php echo esc_html($title); ?></span>
-                            <h3 class="card-name"><?php the_title(); ?></h3>
-                            
-                            <div class="card-meta-row">
-                                <span class="meta-item">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                    <?php echo esc_html($constituency); ?>
-                                </span>
-                            </div>
-
-                            <p class="card-focus">
-                                <strong>Focus:</strong> <?php echo esc_html($focus); ?>
-                            </p>
-
-                            <a href="<?php the_permalink(); ?>" class="view-profile-btn button-yellow">
-                                View Profile
-                            </a>
-                        </div>
-                    </article>
-                <?php endwhile; ?>
-            </div>
-
-            <!-- Pagination -->
-            <div class="directory-pagination">
-                <?php
-                echo paginate_links(array(
-                    'total' => $politician_query->max_num_pages,
-                    'current' => $paged,
-                    'prev_text' => '&laquo; Prev',
-                    'next_text' => 'Next &raquo;',
-                ));
-                ?>
-            </div>
-            <?php wp_reset_postdata(); ?>
-        <?php else: ?>
-            <div class="no-politicians-found">
-                <p>No politician profiles found. Create them in your WordPress admin dashboard.</p>
-            </div>
-        <?php endif; ?>
+        $paged = (get_query_var('paged')) ? get_query_var('paged') : (isset($_GET['paged']) ? intval($_GET['paged']) : 1);
+        echo election_render_politician_grid_html($search_query, $party_filter, $paged);
+        ?>
     </section>
 </main>
 
@@ -144,6 +101,9 @@ get_header(); ?>
     .filter-controls-wrapper {
         flex-direction: column;
     }
+    .custom-dropdown {
+        width: 100% !important;
+    }
 }
 
 .search-input {
@@ -162,21 +122,78 @@ get_header(); ?>
     border-color: var(--color-electric-yellow);
 }
 
-.filter-select {
-    width: 220px;
+.custom-dropdown {
+    position: relative;
+    width: auto;
+    min-width: 220px;
+    max-width: 100%;
+    user-select: none;
+}
+
+.dropdown-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 12px 20px;
     background-color: var(--color-steel-blue);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     color: var(--color-text-white);
     font-size: 15px;
-    outline: none;
     cursor: pointer;
     transition: border-color 0.3s ease;
 }
 
-.filter-select:focus {
+.custom-dropdown.open .dropdown-trigger,
+.dropdown-trigger:hover {
     border-color: var(--color-electric-yellow);
+}
+
+.dropdown-arrow {
+    margin-left: 15px;
+    transition: transform 0.3s ease;
+}
+
+.custom-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background-color: #0b111c;
+    border: 1px solid var(--color-steel-blue);
+    border-radius: 8px;
+    overflow-y: auto;
+    max-height: 250px;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.custom-dropdown.open .dropdown-menu {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 12px 20px;
+    color: var(--color-text-white);
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background-color: var(--color-electric-yellow);
+    color: black !important;
+}
+
+.dropdown-item.active {
+    background-color: rgba(250, 204, 21, 0.2);
+    color: var(--color-electric-yellow);
 }
 
 .politicians-grid {
@@ -328,36 +345,124 @@ get_header(); ?>
     border-radius: 12px;
 }
 </style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('politician-search');
     const partyFilter = document.getElementById('party-filter');
-    const cards = document.querySelectorAll('.politician-card');
+    const gridContainer = document.getElementById('politician-grid-container');
+    let debounceTimer;
 
-    if (searchInput && partyFilter) {
-        function filterPoliticians() {
-            const query = searchInput.value.toLowerCase();
-            const partyVal = partyFilter.value.toLowerCase();
+    function fetchFilteredPoliticians(page = 1) {
+        const searchQuery = searchInput ? searchInput.value : '';
+        const partyVal = partyFilter ? partyFilter.value : '';
 
-            cards.forEach(card => {
-                const name = card.getAttribute('data-name');
-                const party = card.getAttribute('data-party');
-                const constituency = card.getAttribute('data-constituency');
+        gridContainer.style.opacity = '0.5';
 
-                const matchesSearch = name.includes(query) || constituency.includes(query) || party.includes(query);
-                const matchesParty = partyVal === '' || party === partyVal;
+        const formData = new FormData();
+        formData.append('action', 'filter_politicians');
+        formData.append('search_query', searchQuery);
+        formData.append('party_filter', partyVal);
+        formData.append('paged', page);
 
-                if (matchesSearch && matchesParty) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
+        const ajaxUrl = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+        fetch(ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success && res.data.html) {
+                gridContainer.innerHTML = res.data.html;
+                
+                const url = new URL(window.location.href);
+                if (searchQuery) url.searchParams.set('search_query', searchQuery);
+                else url.searchParams.delete('search_query');
+                
+                if (partyVal) url.searchParams.set('party_filter', partyVal);
+                else url.searchParams.delete('party_filter');
+                
+                if (page > 1) url.searchParams.set('paged', page);
+                else url.searchParams.delete('paged');
+                
+                window.history.pushState({}, '', url.toString());
+            }
+            gridContainer.style.opacity = '1';
+        })
+        .catch(err => {
+            console.error('Filtering failed:', err);
+            gridContainer.style.opacity = '1';
+        });
+    }
+
+    if (searchInput && partyFilter && gridContainer) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchFilteredPoliticians(1);
+            }, 300);
+        });
+
+        partyFilter.addEventListener('change', function() {
+            fetchFilteredPoliticians(1);
+        });
+
+        gridContainer.addEventListener('click', function(e) {
+            const pageLink = e.target.closest('.page-numbers');
+            if (pageLink && !pageLink.classList.contains('current')) {
+                e.preventDefault();
+                
+                let pageNum = 1;
+                const href = pageLink.getAttribute('href');
+                if (href) {
+                    const urlParams = new URLSearchParams(href.split('?')[1]);
+                    if (urlParams.has('paged')) {
+                        pageNum = parseInt(urlParams.get('paged'));
+                    } else {
+                        const match = href.match(/\/page\/(\d+)/);
+                        if (match) {
+                            pageNum = parseInt(match[1]);
+                        }
+                    }
                 }
+                
+                fetchFilteredPoliticians(pageNum);
+                gridContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // Custom Dropdown JS Action bindings
+        const customDropdown = document.getElementById('party-filter-dropdown');
+        if (customDropdown) {
+            const trigger = customDropdown.querySelector('.dropdown-trigger');
+            const hiddenInput = document.getElementById('party-filter');
+            const selectedLabel = customDropdown.querySelector('.selected-label');
+
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                customDropdown.classList.toggle('open');
+            });
+
+            customDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const val = this.getAttribute('data-value');
+                    const label = this.textContent;
+
+                    customDropdown.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+
+                    selectedLabel.textContent = label;
+                    hiddenInput.value = val;
+                    customDropdown.classList.remove('open');
+
+                    // Trigger the change event manually
+                    hiddenInput.dispatchEvent(new Event('change'));
+                });
+            });
+
+            document.addEventListener('click', function() {
+                customDropdown.classList.remove('open');
             });
         }
-
-        searchInput.addEventListener('input', filterPoliticians);
-        partyFilter.addEventListener('change', filterPoliticians);
     }
 });
 </script>

@@ -271,7 +271,7 @@ add_action('wp_head', 'election_preload_lcp_images', 1);
 function election_awareness_setup()
 {
     add_theme_support('title-tag');
-    add_theme_support('post-thumbnails', array('post', 'page', 'party', 'product'));
+    add_theme_support('post-thumbnails', array('post', 'page', 'party', 'product', 'politician'));
     add_theme_support('custom-logo');
     add_theme_support('html5', array('search-form', 'comment-form', 'comment-list', 'gallery', 'caption'));
 
@@ -475,6 +475,87 @@ function party_save_meta($post_id)
         update_post_meta($post_id, '_party_popularity', sanitize_text_field($_POST['party_popularity']));
 }
 add_action('save_post', 'party_save_meta');
+
+/**
+ * Politician Meta Boxes
+ */
+function politician_add_meta_boxes()
+{
+    add_meta_box('politician_details', 'Politician Details', 'politician_details_callback', 'politician', 'normal', 'high');
+}
+add_action('add_meta_boxes', 'politician_add_meta_boxes');
+
+function politician_details_callback($post)
+{
+    $title = get_post_meta($post->ID, '_politician_title', true);
+    $selected_party = get_post_meta($post->ID, '_politician_party', true);
+    $constituency = get_post_meta($post->ID, '_politician_constituency', true);
+    $focus = get_post_meta($post->ID, '_politician_focus', true);
+
+    wp_nonce_field('politician_details_nonce', 'politician_details_nonce');
+    ?>
+    <p>
+        <label>Representative Title (e.g. MP, Representative):</label><br>
+        <input type="text" name="politician_title" value="<?php echo esc_attr($title); ?>" style="width:100%;">
+    </p>
+    <p>
+        <label>Political Party:</label><br>
+        <select name="politician_party" style="width:100%;">
+            <option value="">Select Party</option>
+            <option value="Independent" <?php selected($selected_party, 'Independent'); ?>>Independent</option>
+            <?php
+            $parties_query = new WP_Query(array(
+                'post_type' => 'party',
+                'posts_per_page' => -1,
+                'orderby' => 'title',
+                'order' => 'ASC'
+            ));
+            if ($parties_query->have_posts()) {
+                while ($parties_query->have_posts()) {
+                    $parties_query->the_post();
+                    $party_id = get_the_ID();
+                    $party_title = get_the_title();
+                    $is_selected = ($selected_party == $party_id || $selected_party == $party_title);
+                    echo '<option value="' . esc_attr($party_id) . '" ' . selected($is_selected, true, false) . '>' . esc_html($party_title) . '</option>';
+                }
+                wp_reset_postdata();
+            }
+            ?>
+        </select>
+    </p>
+    <p>
+        <label>Constituency:</label><br>
+        <input type="text" name="politician_constituency" value="<?php echo esc_attr($constituency); ?>" style="width:100%;">
+    </p>
+    <p>
+        <label>Focus Area:</label><br>
+        <input type="text" name="politician_focus" value="<?php echo esc_attr($focus); ?>" style="width:100%;">
+    </p>
+    <?php
+}
+
+function politician_save_meta($post_id)
+{
+    if (!isset($_POST['politician_details_nonce']) || !wp_verify_nonce($_POST['politician_details_nonce'], 'politician_details_nonce'))
+        return;
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+        return;
+    if (!current_user_can('edit_post', $post_id))
+        return;
+    if (get_post_type($post_id) !== 'politician')
+        return;
+
+    if (isset($_POST['politician_title']))
+        update_post_meta($post_id, '_politician_title', sanitize_text_field($_POST['politician_title']));
+    if (isset($_POST['politician_party']))
+        update_post_meta($post_id, '_politician_party', sanitize_text_field($_POST['politician_party']));
+    if (isset($_POST['politician_constituency']))
+        update_post_meta($post_id, '_politician_constituency', sanitize_text_field($_POST['politician_constituency']));
+    if (isset($_POST['politician_focus']))
+        update_post_meta($post_id, '_politician_focus', sanitize_text_field($_POST['politician_focus']));
+}
+add_action('save_post', 'politician_save_meta');
+
 
 /**
  * Product Meta Boxes
@@ -1439,6 +1520,28 @@ function election_register_settings()
     register_setting('election_theme_options_group', 'election_theme_parties_count', array(
         'type' => 'integer',
         'default' => 10,
+        'show_in_rest' => true,
+        'sanitize_callback' => 'absint',
+    ));
+
+    // Politicians Page Settings
+    register_setting('election_theme_options_group', 'election_theme_politicians_heading', array(
+        'type' => 'string',
+        'default' => 'Politician Profiles',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_politicians_subheading', array(
+        'type' => 'string',
+        'default' => 'Learn about representatives, their legislative agendas, and political party affiliations.',
+        'show_in_rest' => true,
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+
+    register_setting('election_theme_options_group', 'election_theme_politicians_count', array(
+        'type' => 'integer',
+        'default' => 12,
         'show_in_rest' => true,
         'sanitize_callback' => 'absint',
     ));
@@ -2756,3 +2859,182 @@ function election_app_users_data_center_page() {
     </div>
     <?php
 }
+
+/**
+ * Get politician party name (resolving Party CPT relationship or text value fallback)
+ */
+function election_get_politician_party_name($politician_id)
+{
+    $party_val = get_post_meta($politician_id, '_politician_party', true);
+    if (empty($party_val)) {
+        return 'Independent';
+    }
+    if (is_numeric($party_val)) {
+        $party_post = get_post($party_val);
+        if ($party_post && $party_post->post_type === 'party') {
+            return $party_post->post_title;
+        }
+    }
+    return $party_val;
+}
+
+/**
+ * Search politician post IDs by name, constituency, or party name/CPT
+ */
+function election_search_politicians_ids($search_term)
+{
+    global $wpdb;
+    $search_term = trim($search_term);
+    if (empty($search_term)) {
+        return array();
+    }
+    
+    $like = '%' . $wpdb->esc_like($search_term) . '%';
+    
+    // Query 1: Politician posts with matching titles
+    $post_ids_by_title = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'politician' AND post_status = 'publish' AND post_title LIKE %s",
+        $like
+    ));
+    
+    // Query 2: Politician posts with matching constituency or party name stored in meta
+    $post_ids_by_meta = $wpdb->get_col($wpdb->prepare(
+        "SELECT post_id FROM {$wpdb->postmeta} WHERE (meta_key = '_politician_constituency' AND meta_value LIKE %s) OR (meta_key = '_politician_party' AND meta_value LIKE %s)",
+        $like, $like
+    ));
+
+    // Query 3: Match via Party CPT title
+    $party_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'party' AND post_status = 'publish' AND post_title LIKE %s",
+        $like
+    ));
+    
+    $post_ids_by_party_id = array();
+    if (!empty($party_ids)) {
+        $placeholders = implode(',', array_fill(0, count($party_ids), '%d'));
+        $post_ids_by_party_id = $wpdb->get_col($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_politician_party' AND meta_value IN ($placeholders)",
+            ...$party_ids
+        ));
+    }
+    
+    $merged_ids = array_unique(array_merge($post_ids_by_title, $post_ids_by_meta, $post_ids_by_party_id));
+    return !empty($merged_ids) ? $merged_ids : array(0);
+}
+
+/**
+ * Render politician profiles grid HTML (reusable for Ajax & initial load)
+ */
+function election_render_politician_grid_html($search_query = '', $party_filter = '', $paged = 1)
+{
+    $args = array(
+        'post_type' => 'politician',
+        'posts_per_page' => intval(get_option('election_theme_politicians_count', 12)),
+        'paged' => $paged,
+        'orderby' => 'title',
+        'order' => 'ASC',
+        'post_status' => 'publish'
+    );
+
+    if (!empty($search_query)) {
+        $args['post__in'] = election_search_politicians_ids($search_query);
+    }
+
+    if (!empty($party_filter)) {
+        $args['meta_query'] = array(
+            array(
+                'key' => '_politician_party',
+                'value' => $party_filter,
+                'compare' => '='
+            )
+        );
+    }
+
+    $politician_query = new WP_Query($args);
+
+    ob_start();
+    if ($politician_query->have_posts()): ?>
+        <div class="politicians-grid" id="politicians-list">
+            <?php
+            while ($politician_query->have_posts()):
+                $politician_query->the_post();
+                $title = get_post_meta(get_the_ID(), '_politician_title', true) ?: 'Representative';
+                $party = election_get_politician_party_name(get_the_ID());
+                $constituency = get_post_meta(get_the_ID(), '_politician_constituency', true) ?: 'National Assembly';
+                $focus = get_post_meta(get_the_ID(), '_politician_focus', true) ?: 'General Reform';
+                ?>
+                <article <?php post_class('politician-card'); ?> 
+                         data-name="<?php echo esc_attr(strtolower(get_the_title())); ?>"
+                         data-party="<?php echo esc_attr(strtolower($party)); ?>"
+                         data-constituency="<?php echo esc_attr(strtolower($constituency)); ?>">
+                    
+                    <div class="card-image-wrapper">
+                        <?php if (has_post_thumbnail()): ?>
+                            <?php the_post_thumbnail('medium_large', array('class' => 'card-photo')); ?>
+                        <?php else: ?>
+                            <img src="https://i.pravatar.cc/350?u=<?php the_ID(); ?>" alt="Politician Photo" class="card-photo">
+                        <?php endif; ?>
+                        
+                        <span class="card-party-badge"><?php echo esc_html($party); ?></span>
+                    </div>
+
+                    <div class="card-details">
+                        <span class="card-label"><?php echo esc_html($title); ?></span>
+                        <h3 class="card-name"><?php the_title(); ?></h3>
+                        
+                        <div class="card-meta-row">
+                            <span class="meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                <?php echo esc_html($constituency); ?>
+                            </span>
+                        </div>
+
+                        <p class="card-focus">
+                            <strong>Focus:</strong> <?php echo esc_html($focus); ?>
+                        </p>
+
+                        <a href="<?php the_permalink(); ?>" class="view-profile-btn button-yellow">
+                            View Profile
+                        </a>
+                    </div>
+                </article>
+            <?php endwhile; ?>
+        </div>
+
+        <!-- Pagination -->
+        <div class="directory-pagination">
+            <?php
+            echo paginate_links(array(
+                'total' => $politician_query->max_num_pages,
+                'current' => $paged,
+                'prev_text' => '&laquo; Prev',
+                'next_text' => 'Next &raquo;',
+                'format' => '?paged=%#%',
+            ));
+            ?>
+        </div>
+        <?php wp_reset_postdata(); ?>
+    <?php else: ?>
+        <div class="no-politicians-found">
+            <p>No politician profiles found matching the criteria.</p>
+        </div>
+    <?php endif;
+
+    return ob_get_clean();
+}
+
+/**
+ * Handle Ajax filtering of politicians
+ */
+function election_ajax_filter_politicians()
+{
+    $search_query = isset($_POST['search_query']) ? sanitize_text_field($_POST['search_query']) : '';
+    $party_filter = isset($_POST['party_filter']) ? sanitize_text_field($_POST['party_filter']) : '';
+    $paged = isset($_POST['paged']) ? intval($_POST['paged']) : 1;
+
+    $html = election_render_politician_grid_html($search_query, $party_filter, $paged);
+    wp_send_json_success(array('html' => $html));
+}
+add_action('wp_ajax_filter_politicians', 'election_ajax_filter_politicians');
+add_action('wp_ajax_nopriv_filter_politicians', 'election_ajax_filter_politicians');
+

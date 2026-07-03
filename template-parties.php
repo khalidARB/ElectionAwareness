@@ -15,130 +15,148 @@ get_header(); ?>
         </p>
     </header>
 
-    <section class="party-archive-section container section-spacing-bottom">
+    <!-- Search Section -->
+    <?php
+    $search_query = isset($_GET['search_query']) ? sanitize_text_field($_GET['search_query']) : '';
+    ?>
+    <section class="directory-filters container">
+        <div class="filter-controls-wrapper">
+            <input type="text" id="party-search" placeholder="Search by party name, leader, or manifesto..." class="search-input" value="<?php echo esc_attr($search_query); ?>">
+        </div>
+    </section>
+
+    <section class="party-archive-section container section-spacing-bottom" id="party-list-container">
         <?php
-        $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
-        $posts_per_page = get_option('election_theme_parties_count', 10);
-        $args = array(
-            'post_type' => 'party',
-            'posts_per_page' => $posts_per_page,
-            'paged' => $paged,
-            'orderby' => 'title',
-            'order' => 'ASC'
-        );
-        $party_query = new WP_Query($args);
-
-        if ($party_query->have_posts()): ?>
-            <div class="party-list">
-                <?php
-                while ($party_query->have_posts()):
-                    $party_query->the_post();
-                    $leader = get_post_meta(get_the_ID(), '_party_leader', true);
-                    $year = get_post_meta(get_the_ID(), '_party_year', true);
-                    $seats = get_post_meta(get_the_ID(), '_party_seats', true);
-                    $popularity = get_post_meta(get_the_ID(), '_party_popularity', true);
-
-                    $seats_val = floatval($seats);
-                    $popularity_val = floatval($popularity);
-                    $seats_percent = ($seats_val > 0) ? ($seats_val / 500) * 100 : 0;
-                    ?>
-                    <article <?php post_class('party-card reveal-on-scroll'); ?> id="party-<?php the_ID(); ?>">
-                        <div class="party-card-main">
-                            <!-- Left: Logo -->
-                            <div class="party-logo">
-                                <?php if (has_post_thumbnail()): ?>
-                                    <?php the_post_thumbnail('thumbnail'); ?>
-                                <?php else: ?>
-                                    <div class="party-logo-placeholder"></div>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Middle: Info -->
-                            <div class="party-info">
-                                <h2 class="party-name">
-                                    <?php the_title(); ?>
-                                </h2>
-                                <div class="party-meta">
-                                    <span class="meta-item"><strong>Leader:</strong>
-                                        <?php echo esc_html($leader); ?>
-                                    </span>
-                                    <span class="meta-item"><strong>Founded:</strong>
-                                        <?php echo esc_html($year); ?>
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Right: Stats -->
-                            <div class="party-stats">
-                                <div class="stat-group">
-                                    <label>Poll Popularity</label>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: <?php echo esc_attr($popularity_val); ?>%;">
-                                        </div>
-                                        <span class="stat-value">
-                                            <?php echo esc_html($popularity_val); ?>%
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="stat-group">
-                                    <label>Current Seats</label>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: <?php echo esc_attr($seats_percent); ?>%;">
-                                        </div>
-                                        <span class="stat-value">
-                                            <?php echo esc_html($seats); ?> / 500
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Expand Trigger -->
-                            <button class="party-expand-btn" aria-expanded="false"
-                                aria-controls="party-content-<?php the_ID(); ?>">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M6 9l6 6 6-6" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Accordion Content -->
-                        <div class="party-card-expanded" id="party-content-<?php the_ID(); ?>" hidden>
-                            <div class="expanded-inner">
-                                <div class="manifesto-section">
-                                    <div class="manifesto-header">
-                                        <h3>Manifesto Summary</h3>
-                                        <a href="<?php the_permalink(); ?>" class="btn-party-view">View Full Profile</a>
-                                    </div>
-                                    <div class="manifesto-text">
-                                        <?php the_excerpt(); ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-                <?php endwhile; ?>
-            </div>
-
-            <!-- Pagination -->
-            <div class="blog-pagination">
-                <?php
-                echo paginate_links(array(
-                    'total' => $party_query->max_num_pages,
-                    'current' => $paged,
-                    'prev_text' => '&larr; Previous',
-                    'next_text' => 'Next &rarr;',
-                    'mid_size' => 2,
-                    'type' => 'list'
-                ));
-                ?>
-            </div>
-            <?php wp_reset_postdata(); ?>
-
-        <?php else: ?>
-            <p>No political parties found.</p>
-        <?php endif; ?>
+        $paged = (get_query_var('paged')) ? get_query_var('paged') : (isset($_GET['paged']) ? intval($_GET['paged']) : 1);
+        echo election_render_parties_list_html($search_query, $paged);
+        ?>
     </section>
 </main>
+
+<style>
+/* Political Parties Directory Search Styles */
+.directory-filters {
+    margin-bottom: 40px;
+}
+
+.filter-controls-wrapper {
+    display: flex;
+    gap: 20px;
+    background: rgba(22, 31, 46, 0.4);
+    border: 1px solid var(--color-steel-blue);
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px 20px;
+    background-color: var(--color-steel-blue);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--color-text-white);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+    border-color: var(--color-electric-yellow);
+}
+
+.no-parties-found {
+    text-align: center;
+    padding: 50px;
+    background: rgba(22, 31, 46, 0.2);
+    border: 1px solid var(--color-steel-blue);
+    border-radius: 12px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('party-search');
+    const listContainer = document.getElementById('party-list-container');
+    let debounceTimer;
+
+    function fetchFilteredParties(page = 1) {
+        const searchQuery = searchInput ? searchInput.value : '';
+
+        listContainer.style.opacity = '0.5';
+
+        const formData = new FormData();
+        formData.append('action', 'filter_parties');
+        formData.append('search_query', searchQuery);
+        formData.append('paged', page);
+
+        const ajaxUrl = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+        fetch(ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success && res.data.html) {
+                listContainer.innerHTML = res.data.html;
+                
+                // Trigger reveal-on-scroll animation for dynamically loaded items
+                listContainer.querySelectorAll('.reveal-on-scroll').forEach((el, index) => {
+                    setTimeout(() => {
+                        el.classList.add('in-view');
+                    }, index * 50); // Staggered fade-in
+                });
+                
+                const url = new URL(window.location.href);
+                if (searchQuery) url.searchParams.set('search_query', searchQuery);
+                else url.searchParams.delete('search_query');
+                
+                if (page > 1) url.searchParams.set('paged', page);
+                else url.searchParams.delete('paged');
+                
+                window.history.pushState({}, '', url.toString());
+            }
+            listContainer.style.opacity = '1';
+        })
+        .catch(err => {
+            console.error('Filtering failed:', err);
+            listContainer.style.opacity = '1';
+        });
+    }
+
+    if (searchInput && listContainer) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchFilteredParties(1);
+            }, 300);
+        });
+
+        listContainer.addEventListener('click', function(e) {
+            // Handle pagination clicks within the container
+            const pageLink = e.target.closest('.blog-pagination a') || e.target.closest('.page-numbers');
+            if (pageLink && !pageLink.classList.contains('current') && !pageLink.classList.contains('active')) {
+                e.preventDefault();
+                
+                let pageNum = 1;
+                const href = pageLink.getAttribute('href');
+                if (href) {
+                    const urlParams = new URLSearchParams(href.split('?')[1]);
+                    if (urlParams.has('paged')) {
+                        pageNum = parseInt(urlParams.get('paged'));
+                    } else {
+                        const match = href.match(/\/page\/(\d+)/);
+                        if (match) {
+                            pageNum = parseInt(match[1]);
+                        }
+                    }
+                }
+                
+                fetchFilteredParties(pageNum);
+                listContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+});
+</script>
 
 <?php get_footer(); ?>

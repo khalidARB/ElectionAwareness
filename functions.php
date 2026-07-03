@@ -1312,6 +1312,10 @@ function election_the_breadcrumbs()
         echo '<a href="' . esc_url(get_post_type_archive_link('party')) . '">Political Parties</a>';
         echo '<span class="sep">/</span>';
         the_title();
+    } elseif (is_singular('politician')) {
+        echo '<a href="' . esc_url(get_post_type_archive_link('politician')) . '">Politician Profiles</a>';
+        echo '<span class="sep">/</span>';
+        the_title();
     } elseif (is_singular('post')) {
         echo '<a href="' . esc_url(get_post_type_archive_link('post')) . '">Blogs</a>';
         echo '<span class="sep">/</span>';
@@ -3037,4 +3041,184 @@ function election_ajax_filter_politicians()
 }
 add_action('wp_ajax_filter_politicians', 'election_ajax_filter_politicians');
 add_action('wp_ajax_nopriv_filter_politicians', 'election_ajax_filter_politicians');
+
+/**
+ * Search political party post IDs by title, content, or leader
+ */
+function election_search_parties_ids($search_term)
+{
+    global $wpdb;
+    $search_term = trim($search_term);
+    if (empty($search_term)) {
+        return array();
+    }
+    
+    $like = '%' . $wpdb->esc_like($search_term) . '%';
+    
+    // Query 1: Party posts with matching titles or content
+    $post_ids_by_title_content = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'party' AND post_status = 'publish' AND (post_title LIKE %s OR post_content LIKE %s)",
+        $like, $like
+    ));
+    
+    // Query 2: Party posts with matching leader meta
+    $post_ids_by_meta = $wpdb->get_col($wpdb->prepare(
+        "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_party_leader' AND meta_value LIKE %s",
+        $like
+    ));
+    
+    $merged_ids = array_unique(array_merge($post_ids_by_title_content, $post_ids_by_meta));
+    return !empty($merged_ids) ? $merged_ids : array(0);
+}
+
+/**
+ * Render political parties list HTML (reusable for Ajax & initial load)
+ */
+function election_render_parties_list_html($search_query = '', $paged = 1)
+{
+    $posts_per_page = get_option('election_theme_parties_count', 10);
+    $args = array(
+        'post_type' => 'party',
+        'posts_per_page' => $posts_per_page,
+        'paged' => $paged,
+        'orderby' => 'title',
+        'order' => 'ASC',
+        'post_status' => 'publish'
+    );
+
+    if (!empty($search_query)) {
+        $args['post__in'] = election_search_parties_ids($search_query);
+    }
+
+    $party_query = new WP_Query($args);
+
+    ob_start();
+    if ($party_query->have_posts()): ?>
+        <div class="party-list">
+            <?php
+            while ($party_query->have_posts()):
+                $party_query->the_post();
+                $leader = get_post_meta(get_the_ID(), '_party_leader', true);
+                $year = get_post_meta(get_the_ID(), '_party_year', true);
+                $seats = get_post_meta(get_the_ID(), '_party_seats', true);
+                $popularity = get_post_meta(get_the_ID(), '_party_popularity', true);
+
+                $seats_val = floatval($seats);
+                $popularity_val = floatval($popularity);
+                $seats_percent = ($seats_val > 0) ? ($seats_val / 500) * 100 : 0;
+                ?>
+                <article <?php post_class('party-card reveal-on-scroll'); ?> id="party-<?php the_ID(); ?>">
+                    <div class="party-card-main">
+                        <!-- Left: Logo -->
+                        <div class="party-logo">
+                            <?php if (has_post_thumbnail()): ?>
+                                <?php the_post_thumbnail('thumbnail'); ?>
+                            <?php else: ?>
+                                <div class="party-logo-placeholder"></div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Middle: Info -->
+                        <div class="party-info">
+                            <h2 class="party-name">
+                                <?php the_title(); ?>
+                            </h2>
+                            <div class="party-meta">
+                                <span class="meta-item"><strong>Leader:</strong>
+                                    <?php echo esc_html($leader); ?>
+                                </span>
+                                <span class="meta-item"><strong>Founded:</strong>
+                                    <?php echo esc_html($year); ?>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Right: Stats -->
+                        <div class="party-stats">
+                            <div class="stat-group">
+                                <label>Poll Popularity</label>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: <?php echo esc_attr($popularity_val); ?>%;">
+                                    </div>
+                                    <span class="stat-value">
+                                        <?php echo esc_html($popularity_val); ?>%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="stat-group">
+                                <label>Current Seats</label>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: <?php echo esc_attr($seats_percent); ?>%;">
+                                    </div>
+                                    <span class="stat-value">
+                                        <?php echo esc_html($seats); ?> / 500
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expand Trigger -->
+                        <button class="party-expand-btn" aria-expanded="false"
+                            aria-controls="party-content-<?php the_ID(); ?>">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Accordion Content -->
+                    <div class="party-card-expanded" id="party-content-<?php the_ID(); ?>" hidden>
+                        <div class="expanded-inner">
+                            <div class="manifesto-section">
+                                <div class="manifesto-header">
+                                    <h3>Manifesto Summary</h3>
+                                    <a href="<?php the_permalink(); ?>" class="btn-party-view">View Full Profile</a>
+                                </div>
+                                <div class="manifesto-text">
+                                    <?php the_excerpt(); ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            <?php endwhile; ?>
+        </div>
+
+        <!-- Pagination -->
+        <div class="blog-pagination">
+            <?php
+            echo paginate_links(array(
+                'total' => $party_query->max_num_pages,
+                'current' => $paged,
+                'prev_text' => '&larr; Previous',
+                'next_text' => 'Next &rarr;',
+                'mid_size' => 2,
+                'type' => 'list'
+            ));
+            ?>
+        </div>
+        <?php wp_reset_postdata(); ?>
+
+    <?php else: ?>
+        <p class="no-parties-found">No political parties found matching the criteria.</p>
+    <?php endif;
+
+    return ob_get_clean();
+}
+
+/**
+ * Handle Ajax filtering of political parties
+ */
+function election_ajax_filter_parties()
+{
+    $search_query = isset($_POST['search_query']) ? sanitize_text_field($_POST['search_query']) : '';
+    $paged = isset($_POST['paged']) ? intval($_POST['paged']) : 1;
+
+    $html = election_render_parties_list_html($search_query, $paged);
+    wp_send_json_success(array('html' => $html));
+}
+add_action('wp_ajax_filter_parties', 'election_ajax_filter_parties');
+add_action('wp_ajax_nopriv_filter_parties', 'election_ajax_filter_parties');
+
 

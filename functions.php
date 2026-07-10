@@ -3221,4 +3221,38 @@ function election_ajax_filter_parties()
 add_action('wp_ajax_filter_parties', 'election_ajax_filter_parties');
 add_action('wp_ajax_nopriv_filter_parties', 'election_ajax_filter_parties');
 
+/**
+ * Expose feed_post custom meta in REST API
+ */
+add_action('rest_api_init', 'election_expose_feed_meta_rest_api');
+function election_expose_feed_meta_rest_api() {
+    register_rest_field('feed_post', 'feed_type', array(
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], '_feed_type', true) ?: 'text';
+        },
+        'schema' => null,
+    ));
 
+    register_rest_field('feed_post', 'feed_media', array(
+        'get_callback' => function($post) {
+            $media_ids = get_post_meta($post['id'], '_feed_media_ids', true);
+            $media_urls = array();
+            if (!empty($media_ids)) {
+                $ids = explode(',', $media_ids);
+                foreach ($ids as $id) {
+                    $url = wp_get_attachment_url($id);
+                    if ($url) {
+                        $type = wp_attachment_is_image($id) ? 'image' : 'video';
+                        $media_urls[] = array(
+                            'id' => $id,
+                            'url' => $url,
+                            'type' => $type
+                        );
+                    }
+                }
+            }
+            return $media_urls;
+        },
+        'schema' => null,
+    ));
+}

@@ -265,15 +265,6 @@ get_header(); ?>
     padding: 25px;
 }
 
-.card-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: var(--color-electric-yellow);
-    font-weight: 700;
-    letter-spacing: 1px;
-    display: block;
-    margin-bottom: 8px;
-}
 
 .card-name {
     font-size: 1.4rem;
@@ -282,37 +273,9 @@ get_header(); ?>
     margin: 0 0 12px 0;
 }
 
-.card-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-    font-size: 13px;
-    color: var(--color-text-muted);
-}
 
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 
-.card-focus {
-    font-size: 14px;
-    line-height: 1.5;
-    margin: 0 0 20px 0;
-}
 
-.view-profile-btn {
-    display: block;
-    text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
 
 .directory-pagination {
     margin-top: 50px;

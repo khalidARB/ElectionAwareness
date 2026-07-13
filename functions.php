@@ -487,17 +487,11 @@ add_action('add_meta_boxes', 'politician_add_meta_boxes');
 
 function politician_details_callback($post)
 {
-    $title = get_post_meta($post->ID, '_politician_title', true);
     $selected_party = get_post_meta($post->ID, '_politician_party', true);
-    $constituency = get_post_meta($post->ID, '_politician_constituency', true);
-    $focus = get_post_meta($post->ID, '_politician_focus', true);
+    $timeline = get_post_meta($post->ID, '_politician_timeline', true);
 
     wp_nonce_field('politician_details_nonce', 'politician_details_nonce');
     ?>
-    <p>
-        <label>Representative Title (e.g. MP, Representative):</label><br>
-        <input type="text" name="politician_title" value="<?php echo esc_attr($title); ?>" style="width:100%;">
-    </p>
     <p>
         <label>Political Party:</label><br>
         <select name="politician_party" style="width:100%;">
@@ -524,12 +518,8 @@ function politician_details_callback($post)
         </select>
     </p>
     <p>
-        <label>Constituency:</label><br>
-        <input type="text" name="politician_constituency" value="<?php echo esc_attr($constituency); ?>" style="width:100%;">
-    </p>
-    <p>
-        <label>Focus Area:</label><br>
-        <input type="text" name="politician_focus" value="<?php echo esc_attr($focus); ?>" style="width:100%;">
+        <label>Politician Career Timeline (Format: <code>Year | Event Title | Event Description</code>, one per line):</label><br>
+        <textarea name="politician_timeline" rows="6" style="width:100%;" placeholder="e.g.&#10;2018 | Entered Public Service | Started community organizing.&#10;2021 | Elected to Assembly | Won seat in central constituency.&#10;2024 | Sponsored Reform Bill | Led the new transparency legislation."><?php echo esc_textarea($timeline); ?></textarea>
     </p>
     <?php
 }
@@ -545,14 +535,10 @@ function politician_save_meta($post_id)
     if (get_post_type($post_id) !== 'politician')
         return;
 
-    if (isset($_POST['politician_title']))
-        update_post_meta($post_id, '_politician_title', sanitize_text_field($_POST['politician_title']));
     if (isset($_POST['politician_party']))
         update_post_meta($post_id, '_politician_party', sanitize_text_field($_POST['politician_party']));
-    if (isset($_POST['politician_constituency']))
-        update_post_meta($post_id, '_politician_constituency', sanitize_text_field($_POST['politician_constituency']));
-    if (isset($_POST['politician_focus']))
-        update_post_meta($post_id, '_politician_focus', sanitize_text_field($_POST['politician_focus']));
+    if (isset($_POST['politician_timeline']))
+        update_post_meta($post_id, '_politician_timeline', sanitize_textarea_field($_POST['politician_timeline']));
 }
 add_action('save_post', 'politician_save_meta');
 
@@ -2971,36 +2957,21 @@ function election_render_politician_grid_html($search_query = '', $party_filter 
                          data-name="<?php echo esc_attr(strtolower(get_the_title())); ?>"
                          data-party="<?php echo esc_attr(strtolower($party)); ?>"
                          data-constituency="<?php echo esc_attr(strtolower($constituency)); ?>">
-                    
-                    <div class="card-image-wrapper">
-                        <?php if (has_post_thumbnail()): ?>
-                            <?php the_post_thumbnail('medium_large', array('class' => 'card-photo')); ?>
-                        <?php else: ?>
-                            <img src="https://i.pravatar.cc/350?u=<?php the_ID(); ?>" alt="Politician Photo" class="card-photo">
-                        <?php endif; ?>
-                        
-                        <span class="card-party-badge"><?php echo esc_html($party); ?></span>
-                    </div>
-
-                    <div class="card-details">
-                        <span class="card-label"><?php echo esc_html($title); ?></span>
-                        <h3 class="card-name"><?php the_title(); ?></h3>
-                        
-                        <div class="card-meta-row">
-                            <span class="meta-item">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                <?php echo esc_html($constituency); ?>
-                            </span>
+                    <a href="<?php the_permalink(); ?>" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
+                        <div class="card-image-wrapper">
+                            <?php if (has_post_thumbnail()): ?>
+                                <?php the_post_thumbnail('medium_large', array('class' => 'card-photo')); ?>
+                            <?php else: ?>
+                                <img src="https://i.pravatar.cc/350?u=<?php the_ID(); ?>" alt="Politician Photo" class="card-photo">
+                            <?php endif; ?>
+                            
+                            <span class="card-party-badge"><?php echo esc_html($party); ?></span>
                         </div>
 
-                        <p class="card-focus">
-                            <strong>Focus:</strong> <?php echo esc_html($focus); ?>
-                        </p>
-
-                        <a href="<?php the_permalink(); ?>" class="view-profile-btn button-yellow">
-                            View Profile
-                        </a>
-                    </div>
+                        <div class="card-details">
+                            <h3 class="card-name"><?php the_title(); ?></h3>
+                        </div>
+                    </a>
                 </article>
             <?php endwhile; ?>
         </div>

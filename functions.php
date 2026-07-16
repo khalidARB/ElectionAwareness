@@ -353,14 +353,34 @@ function election_awareness_cpt_init()
         'show_in_rest' => true,
         'supports' => array('title', 'editor', 'thumbnail', 'author'),
         'menu_icon' => 'dashicons-format-status',
-        'capabilities' => array(
-            'create_posts' => 'manage_options',
-            'edit_posts' => 'manage_options',
-            'edit_others_posts' => 'manage_options',
-            'publish_posts' => 'manage_options',
-            'read_private_posts' => 'manage_options',
-        ),
+        'capability_type' => 'feed_post',
+        'map_meta_cap' => true,
     ));
+
+    // Grant feed_post capabilities to Administrator role dynamically
+    $admin = get_role('administrator');
+    if ($admin) {
+        $feed_post_caps = array(
+            'edit_feed_post',
+            'read_feed_post',
+            'delete_feed_post',
+            'edit_feed_posts',
+            'edit_others_feed_posts',
+            'delete_feed_posts',
+            'publish_feed_posts',
+            'read_private_feed_posts',
+            'delete_others_feed_posts',
+            'delete_published_feed_posts',
+            'delete_private_feed_posts',
+            'edit_published_feed_posts',
+            'edit_private_feed_posts',
+        );
+        foreach ($feed_post_caps as $cap) {
+            if (!$admin->has_cap($cap)) {
+                $admin->add_cap($cap);
+            }
+        }
+    }
 
     // Register Politician Profile CPT
     register_post_type('politician', array(
@@ -3223,6 +3243,42 @@ function election_expose_feed_meta_rest_api() {
                 }
             }
             return $media_urls;
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('party', 'leader', array(
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], '_party_leader', true) ?: '';
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('party', 'year', array(
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], '_party_year', true) ?: '';
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('party', 'seats', array(
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], '_party_seats', true) ?: '0';
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('party', 'popularity', array(
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], '_party_popularity', true) ?: '0';
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('party', 'featured_image_url', array(
+        'get_callback' => function($post) {
+            $thumb_id = get_post_thumbnail_id($post['id']);
+            return $thumb_id ? wp_get_attachment_url($thumb_id) : '';
         },
         'schema' => null,
     ));

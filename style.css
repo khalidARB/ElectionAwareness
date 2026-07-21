@@ -4,7 +4,7 @@ Theme URI: https://example.com/election-awareness
 Author: ARb
 Author URI: https://example.com/arb
 Description: A high-contrast "Dark Mode" React-powered theme with modern typography and fluid interactivity.
-Version: 1.5.6
+Version: 1.5.7
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -3575,8 +3575,10 @@ body.single .site-header {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--color-midnight-blue);
     border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 24px 30px;
+    border-radius: var(--border-radius-lg);
 }
 
 .stat-box {

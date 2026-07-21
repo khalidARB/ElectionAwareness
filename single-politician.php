@@ -225,15 +225,6 @@ while (have_posts()):
         display: inline-block;
     }
     
-    .section-heading::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 50px;
-        height: 2px;
-        background-color: var(--color-electric-yellow);
-    }
     
     .entry-content {
         font-size: 17px;

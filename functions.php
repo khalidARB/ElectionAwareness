@@ -2984,12 +2984,11 @@ function election_render_politician_grid_html($search_query = '', $party_filter 
                             <?php else: ?>
                                 <img src="https://i.pravatar.cc/350?u=<?php the_ID(); ?>" alt="Politician Photo" class="card-photo">
                             <?php endif; ?>
-                            
-                            <span class="card-party-badge"><?php echo esc_html($party); ?></span>
                         </div>
 
                         <div class="card-details">
                             <h3 class="card-name"><?php the_title(); ?></h3>
+                            <span class="card-party-name"><?php echo esc_html($party); ?></span>
                         </div>
                     </a>
                 </article>
@@ -3279,6 +3278,13 @@ function election_expose_feed_meta_rest_api() {
         'get_callback' => function($post) {
             $thumb_id = get_post_thumbnail_id($post['id']);
             return $thumb_id ? wp_get_attachment_url($thumb_id) : '';
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('politician', 'party_name', array(
+        'get_callback' => function($post) {
+            return election_get_politician_party_name($post['id']);
         },
         'schema' => null,
     ));

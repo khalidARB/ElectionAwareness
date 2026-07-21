@@ -247,18 +247,14 @@ get_header(); ?>
     transform: scale(1.05);
 }
 
-.card-party-badge {
-    position: absolute;
-    bottom: 15px;
-    left: 15px;
-    background-color: var(--color-electric-yellow);
-    color: black;
-    padding: 6px 12px;
-    border-radius: 50px;
-    font-size: 11px;
-    font-weight: 700;
+.card-party-name {
+    display: block;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
 .card-details {

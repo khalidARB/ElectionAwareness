@@ -3288,4 +3288,36 @@ function election_expose_feed_meta_rest_api() {
         },
         'schema' => null,
     ));
+
+    register_rest_field('politician', 'timeline', array(
+        'get_callback' => function($post) {
+            $raw_timeline = get_post_meta($post['id'], '_politician_timeline', true);
+            $timeline = array();
+            if (!empty($raw_timeline)) {
+                $lines = preg_split('/\r\n|\r|\n/', $raw_timeline);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    $parts = explode('|', $line);
+                    if (count($parts) >= 2) {
+                        $timeline[] = array(
+                            'year'  => trim($parts[0]),
+                            'title' => trim($parts[1]),
+                            'desc'  => isset($parts[2]) ? trim($parts[2]) : ''
+                        );
+                    }
+                }
+            }
+            return !empty($timeline) ? $timeline : null;
+        },
+        'schema' => null,
+    ));
+
+    register_rest_field('politician', 'featured_image_url', array(
+        'get_callback' => function($post) {
+            $thumb_id = get_post_thumbnail_id($post['id']);
+            return $thumb_id ? wp_get_attachment_url($thumb_id) : '';
+        },
+        'schema' => null,
+    ));
 }
